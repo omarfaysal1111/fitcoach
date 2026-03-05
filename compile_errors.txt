@@ -1,0 +1,642 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -----------------------< com.fitcoach:fitcoach >------------------------
+[INFO] Building FitCoach Pro API 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.3.2:clean (default-clean) @ fitcoach ---
+[INFO] Deleting /Users/admin/.gemini/antigravity/scratch/fitcoach/target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ fitcoach ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ fitcoach ---
+[INFO] Changes detected - recompiling the module! :source
+[INFO] Compiling 52 source files with javac [debug release 21] to target/classes
+[INFO] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java: /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java uses unchecked or unsafe operations.
+[INFO] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java: Recompile with -Xlint:unchecked for details.
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[31,40] cannot find symbol
+  symbol:   method getFullName()
+  location: variable request of type com.fitcoach.dto.request.UpdateTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[32,20] cannot find symbol
+  symbol:   method getUser()
+  location: variable trainee of type com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[32,50] cannot find symbol
+  symbol:   method getFullName()
+  location: variable request of type com.fitcoach.dto.request.UpdateTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[34,40] cannot find symbol
+  symbol:   method getFitnessGoal()
+  location: variable request of type com.fitcoach.dto.request.UpdateTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[35,43] cannot find symbol
+  symbol:   method getFitnessGoal()
+  location: variable request of type com.fitcoach.dto.request.UpdateTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[45,28] cannot find symbol
+  symbol:   method getCoach()
+  location: variable trainee of type com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[46,36] cannot find symbol
+  symbol:   method builder()
+  location: class com.fitcoach.dto.response.CoachProfileResponse
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[62,51] cannot find symbol
+  symbol:   method getId()
+  location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[67,28] cannot find symbol
+  symbol:   method getCoach()
+  location: variable trainee of type com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[68,38] cannot find symbol
+  symbol:   method builder()
+  location: class com.fitcoach.dto.response.TraineeProfileResponse
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[69,28] cannot find symbol
+  symbol:   method getId()
+  location: variable trainee of type com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[70,32] cannot find symbol
+  symbol:   method getUser()
+  location: variable trainee of type com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[71,34] cannot find symbol
+  symbol:   method getUser()
+  location: variable trainee of type com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[72,31] cannot find symbol
+  symbol:   method getUser()
+  location: variable trainee of type com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[73,37] cannot find symbol
+  symbol:   method getFitnessGoal()
+  location: variable trainee of type com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[76,35] cannot find symbol
+  symbol:   method getCreatedAt()
+  location: variable trainee of type com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[41,24] cannot find symbol
+  symbol:   method getEmail()
+  location: variable request of type com.fitcoach.dto.request.InvitationRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[41,42] cannot find symbol
+  symbol:   method getId()
+  location: variable coach of type com.fitcoach.domain.entity.Coach
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[43,74] cannot find symbol
+  symbol:   method getEmail()
+  location: variable request of type com.fitcoach.dto.request.InvitationRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[46,43] cannot find symbol
+  symbol:   method builder()
+  location: class com.fitcoach.domain.entity.Invitation
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[48,38] cannot find symbol
+  symbol:   method getEmail()
+  location: variable request of type com.fitcoach.dto.request.InvitationRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[60,59] cannot find symbol
+  symbol:   method getId()
+  location: variable coach of type com.fitcoach.domain.entity.Coach
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[76,24] cannot find symbol
+  symbol:   method getInviteeEmail()
+  location: variable invitation of type com.fitcoach.domain.entity.Invitation
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[80,19] cannot find symbol
+  symbol:   method setStatus(com.fitcoach.domain.enums.InvitationStatus)
+  location: variable invitation of type com.fitcoach.domain.entity.Invitation
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[83,26] cannot find symbol
+  symbol:   method getCoach()
+  location: variable invitation of type com.fitcoach.domain.entity.Invitation
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[90,49] cannot find symbol
+  symbol:   method getId()
+  location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[95,34] cannot find symbol
+  symbol:   method builder()
+  location: class com.fitcoach.dto.response.InvitationResponse
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[96,34] cannot find symbol
+  symbol:   method getToken()
+  location: variable invitation of type com.fitcoach.domain.entity.Invitation
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[97,41] cannot find symbol
+  symbol:   method getInviteeEmail()
+  location: variable invitation of type com.fitcoach.domain.entity.Invitation
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[98,35] cannot find symbol
+  symbol:   method getStatus()
+  location: variable invitation of type com.fitcoach.domain.entity.Invitation
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[99,38] cannot find symbol
+  symbol:   method getExpiresAt()
+  location: variable invitation of type com.fitcoach.domain.entity.Invitation
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[100,38] cannot find symbol
+  symbol:   method getCreatedAt()
+  location: variable invitation of type com.fitcoach.domain.entity.Invitation
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[33,13] cannot find symbol
+  symbol:   variable log
+  location: class com.fitcoach.service.DataSeedingService
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[36,9] cannot find symbol
+  symbol:   variable log
+  location: class com.fitcoach.service.DataSeedingService
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[46,49] cannot find symbol
+  symbol:   method builder()
+  location: class com.fitcoach.domain.entity.Exercise
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[55,17] cannot find symbol
+  symbol:   variable log
+  location: class com.fitcoach.service.DataSeedingService
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[58,13] cannot find symbol
+  symbol:   variable log
+  location: class com.fitcoach.service.DataSeedingService
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[64,13] cannot find symbol
+  symbol:   variable log
+  location: class com.fitcoach.service.DataSeedingService
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[67,9] cannot find symbol
+  symbol:   variable log
+  location: class com.fitcoach.service.DataSeedingService
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[91,59] cannot find symbol
+  symbol:   method builder()
+  location: class com.fitcoach.domain.entity.Ingredient
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[99,17] cannot find symbol
+  symbol:   variable log
+  location: class com.fitcoach.service.DataSeedingService
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[102,13] cannot find symbol
+  symbol:   variable log
+  location: class com.fitcoach.service.DataSeedingService
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/security/JwtUtil.java:[60,13] cannot find symbol
+  symbol:   variable log
+  location: class com.fitcoach.security.JwtUtil
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/controller/NutritionPlanController.java:[36,63] method error in class com.fitcoach.dto.response.ApiResponse<T> cannot be applied to given types;
+  required: java.lang.String
+  found:    java.lang.String,int
+  reason: cannot infer type-variable(s) T
+    (actual and formal argument lists differ in length)
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/controller/NutritionPlanController.java:[43,56] cannot find symbol
+  symbol:   method getId()
+  location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/controller/NutritionPlanController.java:[46,76] cannot find symbol
+  symbol:   method getId()
+  location: variable coach of type com.fitcoach.domain.entity.Coach
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/controller/NutritionPlanController.java:[47,45] cannot find symbol
+  symbol:   method success(com.fitcoach.domain.entity.NutritionPlan,java.lang.String)
+  location: class com.fitcoach.dto.response.ApiResponse
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/controller/NutritionPlanController.java:[56,56] cannot find symbol
+  symbol:   method getId()
+  location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/controller/NutritionPlanController.java:[59,79] cannot find symbol
+  symbol:   method getId()
+  location: variable coach of type com.fitcoach.domain.entity.Coach
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/controller/NutritionPlanController.java:[60,45] cannot find symbol
+  symbol:   method success(java.util.List<com.fitcoach.domain.entity.NutritionPlan>,java.lang.String)
+  location: class com.fitcoach.dto.response.ApiResponse
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[30,71] cannot find symbol
+  symbol:   method getTraineeIds()
+  location: variable request of type com.fitcoach.dto.request.CreateNutritionPlanRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[32,43] cannot find symbol
+  symbol:   method builder()
+  location: class com.fitcoach.domain.entity.NutritionPlan
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[33,31] cannot find symbol
+  symbol:   method getTitle()
+  location: variable request of type com.fitcoach.dto.request.CreateNutritionPlanRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[34,37] cannot find symbol
+  symbol:   method getDescription()
+  location: variable request of type com.fitcoach.dto.request.CreateNutritionPlanRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[39,20] cannot find symbol
+  symbol:   method getMeals()
+  location: variable request of type com.fitcoach.dto.request.CreateNutritionPlanRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[40,57] cannot find symbol
+  symbol:   method getMeals()
+  location: variable request of type com.fitcoach.dto.request.CreateNutritionPlanRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[43,32] cannot find symbol
+  symbol:   method getIngredientIds()
+  location: variable mealRequest of type com.fitcoach.dto.request.CreateMealRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[43,75] cannot find symbol
+  symbol:   method getIngredientIds()
+  location: variable mealRequest of type com.fitcoach.dto.request.CreateMealRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[44,101] cannot find symbol
+  symbol:   method getIngredientIds()
+  location: variable mealRequest of type com.fitcoach.dto.request.CreateMealRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[46,81] cannot find symbol
+  symbol:   method getCalories()
+  location: variable i of type com.fitcoach.domain.entity.Ingredient
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[46,107] cannot find symbol
+  symbol:   method getCalories()
+  location: variable i of type com.fitcoach.domain.entity.Ingredient
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[49,32] cannot find symbol
+  symbol:   method getCustomCalories()
+  location: variable mealRequest of type com.fitcoach.dto.request.CreateMealRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[50,48] cannot find symbol
+  symbol:   method getCustomCalories()
+  location: variable mealRequest of type com.fitcoach.dto.request.CreateMealRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[53,33] cannot find symbol
+  symbol:   method builder()
+  location: class com.fitcoach.domain.entity.Meal
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[54,42] cannot find symbol
+  symbol:   method getName()
+  location: variable mealRequest of type com.fitcoach.dto.request.CreateMealRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[59,21] cannot find symbol
+  symbol:   method getMeals()
+  location: variable plan of type com.fitcoach.domain.entity.NutritionPlan
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/dto/response/ApiResponse.java:[19,27] cannot find symbol
+  symbol:   method <T>builder()
+  location: class com.fitcoach.dto.response.ApiResponse
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/dto/response/ApiResponse.java:[27,27] cannot find symbol
+  symbol:   method <T>builder()
+  location: class com.fitcoach.dto.response.ApiResponse
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/dto/response/ApiResponse.java:[36,27] cannot find symbol
+  symbol:   method <T>builder()
+  location: class com.fitcoach.dto.response.ApiResponse
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[40,49] cannot find symbol
+  symbol:   method getEmail()
+  location: variable request of type com.fitcoach.dto.request.RegisterCoachRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[41,78] cannot find symbol
+  symbol:   method getEmail()
+  location: variable request of type com.fitcoach.dto.request.RegisterCoachRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[44,25] cannot find symbol
+  symbol:   method builder()
+  location: class com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[45,34] cannot find symbol
+  symbol:   method getFullName()
+  location: variable request of type com.fitcoach.dto.request.RegisterCoachRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[46,31] cannot find symbol
+  symbol:   method getEmail()
+  location: variable request of type com.fitcoach.dto.request.RegisterCoachRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[47,57] cannot find symbol
+  symbol:   method getPassword()
+  location: variable request of type com.fitcoach.dto.request.RegisterCoachRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[52,28] cannot find symbol
+  symbol:   method builder()
+  location: class com.fitcoach.domain.entity.Coach
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[54,29] cannot find symbol
+  symbol:   method getBio()
+  location: variable request of type com.fitcoach.dto.request.RegisterCoachRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[55,40] cannot find symbol
+  symbol:   method getSpecialisation()
+  location: variable request of type com.fitcoach.dto.request.RegisterCoachRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[59,50] cannot find symbol
+  symbol:   method getEmail()
+  location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[66,49] cannot find symbol
+  symbol:   method getEmail()
+  location: variable request of type com.fitcoach.dto.request.RegisterTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[67,78] cannot find symbol
+  symbol:   method getEmail()
+  location: variable request of type com.fitcoach.dto.request.RegisterTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[71,66] cannot find symbol
+  symbol:   method getInvitationToken()
+  location: variable request of type com.fitcoach.dto.request.RegisterTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[71,96] cannot find symbol
+  symbol:   method getEmail()
+  location: variable request of type com.fitcoach.dto.request.RegisterTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[73,25] cannot find symbol
+  symbol:   method builder()
+  location: class com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[74,34] cannot find symbol
+  symbol:   method getFullName()
+  location: variable request of type com.fitcoach.dto.request.RegisterTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[75,31] cannot find symbol
+  symbol:   method getEmail()
+  location: variable request of type com.fitcoach.dto.request.RegisterTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[76,57] cannot find symbol
+  symbol:   method getPassword()
+  location: variable request of type com.fitcoach.dto.request.RegisterTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[81,34] cannot find symbol
+  symbol:   method builder()
+  location: class com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[84,37] cannot find symbol
+  symbol:   method getFitnessGoal()
+  location: variable request of type com.fitcoach.dto.request.RegisterTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[88,50] cannot find symbol
+  symbol:   method getEmail()
+  location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[95,64] cannot find symbol
+  symbol:   method getEmail()
+  location: variable request of type com.fitcoach.dto.request.LoginRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[95,84] cannot find symbol
+  symbol:   method getPassword()
+  location: variable request of type com.fitcoach.dto.request.LoginRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[97,55] cannot find symbol
+  symbol:   method getEmail()
+  location: variable request of type com.fitcoach.dto.request.LoginRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[106,28] cannot find symbol
+  symbol:   method builder()
+  location: class com.fitcoach.dto.response.AuthResponse
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[109,29] cannot find symbol
+  symbol:   method getId()
+  location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[110,31] cannot find symbol
+  symbol:   method getFullName()
+  location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[111,28] cannot find symbol
+  symbol:   method getEmail()
+  location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[112,27] cannot find symbol
+  symbol:   method getRole()
+  location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/security/CustomUserDetailsService.java:[29,37] cannot find symbol
+  symbol:   method isEnabled()
+  location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/security/CustomUserDetailsService.java:[26,31] cannot find symbol
+  symbol:   method getEmail()
+  location: variable user of type com.fitcoach.domain.entity.User
+[INFO] 100 errors 
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  4.373 s
+[INFO] Finished at: 2026-02-25T00:28:35+02:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.11.0:compile (default-compile) on project fitcoach: Compilation failure: Compilation failure: 
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[31,40] cannot find symbol
+[ERROR]   symbol:   method getFullName()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.UpdateTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[32,20] cannot find symbol
+[ERROR]   symbol:   method getUser()
+[ERROR]   location: variable trainee of type com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[32,50] cannot find symbol
+[ERROR]   symbol:   method getFullName()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.UpdateTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[34,40] cannot find symbol
+[ERROR]   symbol:   method getFitnessGoal()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.UpdateTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[35,43] cannot find symbol
+[ERROR]   symbol:   method getFitnessGoal()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.UpdateTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[45,28] cannot find symbol
+[ERROR]   symbol:   method getCoach()
+[ERROR]   location: variable trainee of type com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[46,36] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fitcoach.dto.response.CoachProfileResponse
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[62,51] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[67,28] cannot find symbol
+[ERROR]   symbol:   method getCoach()
+[ERROR]   location: variable trainee of type com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[68,38] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fitcoach.dto.response.TraineeProfileResponse
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[69,28] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable trainee of type com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[70,32] cannot find symbol
+[ERROR]   symbol:   method getUser()
+[ERROR]   location: variable trainee of type com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[71,34] cannot find symbol
+[ERROR]   symbol:   method getUser()
+[ERROR]   location: variable trainee of type com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[72,31] cannot find symbol
+[ERROR]   symbol:   method getUser()
+[ERROR]   location: variable trainee of type com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[73,37] cannot find symbol
+[ERROR]   symbol:   method getFitnessGoal()
+[ERROR]   location: variable trainee of type com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/TraineeService.java:[76,35] cannot find symbol
+[ERROR]   symbol:   method getCreatedAt()
+[ERROR]   location: variable trainee of type com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[41,24] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.InvitationRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[41,42] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable coach of type com.fitcoach.domain.entity.Coach
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[43,74] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.InvitationRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[46,43] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fitcoach.domain.entity.Invitation
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[48,38] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.InvitationRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[60,59] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable coach of type com.fitcoach.domain.entity.Coach
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[76,24] cannot find symbol
+[ERROR]   symbol:   method getInviteeEmail()
+[ERROR]   location: variable invitation of type com.fitcoach.domain.entity.Invitation
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[80,19] cannot find symbol
+[ERROR]   symbol:   method setStatus(com.fitcoach.domain.enums.InvitationStatus)
+[ERROR]   location: variable invitation of type com.fitcoach.domain.entity.Invitation
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[83,26] cannot find symbol
+[ERROR]   symbol:   method getCoach()
+[ERROR]   location: variable invitation of type com.fitcoach.domain.entity.Invitation
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[90,49] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[95,34] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fitcoach.dto.response.InvitationResponse
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[96,34] cannot find symbol
+[ERROR]   symbol:   method getToken()
+[ERROR]   location: variable invitation of type com.fitcoach.domain.entity.Invitation
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[97,41] cannot find symbol
+[ERROR]   symbol:   method getInviteeEmail()
+[ERROR]   location: variable invitation of type com.fitcoach.domain.entity.Invitation
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[98,35] cannot find symbol
+[ERROR]   symbol:   method getStatus()
+[ERROR]   location: variable invitation of type com.fitcoach.domain.entity.Invitation
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[99,38] cannot find symbol
+[ERROR]   symbol:   method getExpiresAt()
+[ERROR]   location: variable invitation of type com.fitcoach.domain.entity.Invitation
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/InvitationService.java:[100,38] cannot find symbol
+[ERROR]   symbol:   method getCreatedAt()
+[ERROR]   location: variable invitation of type com.fitcoach.domain.entity.Invitation
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[33,13] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.fitcoach.service.DataSeedingService
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[36,9] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.fitcoach.service.DataSeedingService
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[46,49] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fitcoach.domain.entity.Exercise
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[55,17] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.fitcoach.service.DataSeedingService
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[58,13] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.fitcoach.service.DataSeedingService
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[64,13] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.fitcoach.service.DataSeedingService
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[67,9] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.fitcoach.service.DataSeedingService
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[91,59] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fitcoach.domain.entity.Ingredient
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[99,17] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.fitcoach.service.DataSeedingService
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/DataSeedingService.java:[102,13] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.fitcoach.service.DataSeedingService
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/security/JwtUtil.java:[60,13] cannot find symbol
+[ERROR]   symbol:   variable log
+[ERROR]   location: class com.fitcoach.security.JwtUtil
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/controller/NutritionPlanController.java:[36,63] method error in class com.fitcoach.dto.response.ApiResponse<T> cannot be applied to given types;
+[ERROR]   required: java.lang.String
+[ERROR]   found:    java.lang.String,int
+[ERROR]   reason: cannot infer type-variable(s) T
+[ERROR]     (actual and formal argument lists differ in length)
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/controller/NutritionPlanController.java:[43,56] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/controller/NutritionPlanController.java:[46,76] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable coach of type com.fitcoach.domain.entity.Coach
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/controller/NutritionPlanController.java:[47,45] cannot find symbol
+[ERROR]   symbol:   method success(com.fitcoach.domain.entity.NutritionPlan,java.lang.String)
+[ERROR]   location: class com.fitcoach.dto.response.ApiResponse
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/controller/NutritionPlanController.java:[56,56] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/controller/NutritionPlanController.java:[59,79] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable coach of type com.fitcoach.domain.entity.Coach
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/controller/NutritionPlanController.java:[60,45] cannot find symbol
+[ERROR]   symbol:   method success(java.util.List<com.fitcoach.domain.entity.NutritionPlan>,java.lang.String)
+[ERROR]   location: class com.fitcoach.dto.response.ApiResponse
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[30,71] cannot find symbol
+[ERROR]   symbol:   method getTraineeIds()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.CreateNutritionPlanRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[32,43] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fitcoach.domain.entity.NutritionPlan
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[33,31] cannot find symbol
+[ERROR]   symbol:   method getTitle()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.CreateNutritionPlanRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[34,37] cannot find symbol
+[ERROR]   symbol:   method getDescription()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.CreateNutritionPlanRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[39,20] cannot find symbol
+[ERROR]   symbol:   method getMeals()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.CreateNutritionPlanRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[40,57] cannot find symbol
+[ERROR]   symbol:   method getMeals()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.CreateNutritionPlanRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[43,32] cannot find symbol
+[ERROR]   symbol:   method getIngredientIds()
+[ERROR]   location: variable mealRequest of type com.fitcoach.dto.request.CreateMealRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[43,75] cannot find symbol
+[ERROR]   symbol:   method getIngredientIds()
+[ERROR]   location: variable mealRequest of type com.fitcoach.dto.request.CreateMealRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[44,101] cannot find symbol
+[ERROR]   symbol:   method getIngredientIds()
+[ERROR]   location: variable mealRequest of type com.fitcoach.dto.request.CreateMealRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[46,81] cannot find symbol
+[ERROR]   symbol:   method getCalories()
+[ERROR]   location: variable i of type com.fitcoach.domain.entity.Ingredient
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[46,107] cannot find symbol
+[ERROR]   symbol:   method getCalories()
+[ERROR]   location: variable i of type com.fitcoach.domain.entity.Ingredient
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[49,32] cannot find symbol
+[ERROR]   symbol:   method getCustomCalories()
+[ERROR]   location: variable mealRequest of type com.fitcoach.dto.request.CreateMealRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[50,48] cannot find symbol
+[ERROR]   symbol:   method getCustomCalories()
+[ERROR]   location: variable mealRequest of type com.fitcoach.dto.request.CreateMealRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[53,33] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fitcoach.domain.entity.Meal
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[54,42] cannot find symbol
+[ERROR]   symbol:   method getName()
+[ERROR]   location: variable mealRequest of type com.fitcoach.dto.request.CreateMealRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/NutritionPlanService.java:[59,21] cannot find symbol
+[ERROR]   symbol:   method getMeals()
+[ERROR]   location: variable plan of type com.fitcoach.domain.entity.NutritionPlan
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/dto/response/ApiResponse.java:[19,27] cannot find symbol
+[ERROR]   symbol:   method <T>builder()
+[ERROR]   location: class com.fitcoach.dto.response.ApiResponse
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/dto/response/ApiResponse.java:[27,27] cannot find symbol
+[ERROR]   symbol:   method <T>builder()
+[ERROR]   location: class com.fitcoach.dto.response.ApiResponse
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/dto/response/ApiResponse.java:[36,27] cannot find symbol
+[ERROR]   symbol:   method <T>builder()
+[ERROR]   location: class com.fitcoach.dto.response.ApiResponse
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[40,49] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.RegisterCoachRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[41,78] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.RegisterCoachRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[44,25] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[45,34] cannot find symbol
+[ERROR]   symbol:   method getFullName()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.RegisterCoachRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[46,31] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.RegisterCoachRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[47,57] cannot find symbol
+[ERROR]   symbol:   method getPassword()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.RegisterCoachRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[52,28] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fitcoach.domain.entity.Coach
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[54,29] cannot find symbol
+[ERROR]   symbol:   method getBio()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.RegisterCoachRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[55,40] cannot find symbol
+[ERROR]   symbol:   method getSpecialisation()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.RegisterCoachRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[59,50] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[66,49] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.RegisterTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[67,78] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.RegisterTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[71,66] cannot find symbol
+[ERROR]   symbol:   method getInvitationToken()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.RegisterTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[71,96] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.RegisterTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[73,25] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[74,34] cannot find symbol
+[ERROR]   symbol:   method getFullName()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.RegisterTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[75,31] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.RegisterTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[76,57] cannot find symbol
+[ERROR]   symbol:   method getPassword()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.RegisterTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[81,34] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fitcoach.domain.entity.Trainee
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[84,37] cannot find symbol
+[ERROR]   symbol:   method getFitnessGoal()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.RegisterTraineeRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[88,50] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[95,64] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.LoginRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[95,84] cannot find symbol
+[ERROR]   symbol:   method getPassword()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.LoginRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[97,55] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable request of type com.fitcoach.dto.request.LoginRequest
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[106,28] cannot find symbol
+[ERROR]   symbol:   method builder()
+[ERROR]   location: class com.fitcoach.dto.response.AuthResponse
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[109,29] cannot find symbol
+[ERROR]   symbol:   method getId()
+[ERROR]   location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[110,31] cannot find symbol
+[ERROR]   symbol:   method getFullName()
+[ERROR]   location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[111,28] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/service/AuthService.java:[112,27] cannot find symbol
+[ERROR]   symbol:   method getRole()
+[ERROR]   location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/security/CustomUserDetailsService.java:[29,37] cannot find symbol
+[ERROR]   symbol:   method isEnabled()
+[ERROR]   location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] /Users/admin/.gemini/antigravity/scratch/fitcoach/src/main/java/com/fitcoach/security/CustomUserDetailsService.java:[26,31] cannot find symbol
+[ERROR]   symbol:   method getEmail()
+[ERROR]   location: variable user of type com.fitcoach.domain.entity.User
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

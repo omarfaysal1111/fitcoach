@@ -1,0 +1,70 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -----------------------< com.fitcoach:fitcoach >------------------------
+[INFO] Building FitCoach Pro API 1.0.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.2.3:run (default-cli) > test-compile @ fitcoach >>>
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ fitcoach ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ fitcoach ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ fitcoach ---
+[INFO] skip non existing resourceDirectory /Users/admin/.gemini/antigravity/scratch/fitcoach/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ fitcoach ---
+[INFO] Changes detected - recompiling the module! :source
+[INFO] Compiling 1 source file with javac [debug release 21] to target/test-classes
+[INFO] 
+[INFO] <<< spring-boot:3.2.3:run (default-cli) < test-compile @ fitcoach <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.2.3:run (default-cli) @ fitcoach ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.3)
+
+2026-02-26T22:29:21.412+02:00  INFO 7700 --- [fitcoach] [           main] com.fitcoach.FitCoachApplication         : Starting FitCoachApplication using Java 21.0.1 with PID 7700 (/Users/admin/.gemini/antigravity/scratch/fitcoach/target/classes started by admin in /Users/admin/.gemini/antigravity/scratch/fitcoach)
+2026-02-26T22:29:21.415+02:00 DEBUG 7700 --- [fitcoach] [           main] com.fitcoach.FitCoachApplication         : Running with Spring Boot v3.2.3, Spring v6.1.4
+2026-02-26T22:29:21.416+02:00  INFO 7700 --- [fitcoach] [           main] com.fitcoach.FitCoachApplication         : No active profile set, falling back to 1 default profile: "default"
+2026-02-26T22:29:22.330+02:00  INFO 7700 --- [fitcoach] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-02-26T22:29:22.442+02:00  INFO 7700 --- [fitcoach] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 88 ms. Found 9 JPA repository interfaces.
+2026-02-26T22:29:23.214+02:00  INFO 7700 --- [fitcoach] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-02-26T22:29:23.231+02:00  INFO 7700 --- [fitcoach] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-02-26T22:29:23.231+02:00  INFO 7700 --- [fitcoach] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.19]
+2026-02-26T22:29:23.310+02:00  INFO 7700 --- [fitcoach] [           main] o.a.c.c.C.[Tomcat].[localhost].[/api]    : Initializing Spring embedded WebApplicationContext
+2026-02-26T22:29:23.311+02:00  INFO 7700 --- [fitcoach] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1838 ms
+2026-02-26T22:29:23.481+02:00  INFO 7700 --- [fitcoach] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-02-26T22:29:23.554+02:00  INFO 7700 --- [fitcoach] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-02-26T22:29:23.594+02:00  INFO 7700 --- [fitcoach] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-02-26T22:29:23.869+02:00  INFO 7700 --- [fitcoach] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-02-26T22:29:23.901+02:00  INFO 7700 --- [fitcoach] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-02-26T22:29:24.064+02:00  INFO 7700 --- [fitcoach] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@25567581
+2026-02-26T22:29:24.066+02:00  INFO 7700 --- [fitcoach] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-02-26T22:29:24.106+02:00  WARN 7700 --- [fitcoach] [           main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-02-26T22:29:25.415+02:00  INFO 7700 --- [fitcoach] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-02-26T22:29:25.696+02:00  INFO 7700 --- [fitcoach] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-02-26T22:29:26.132+02:00 DEBUG 7700 --- [fitcoach] [           main] com.fitcoach.security.JwtAuthFilter      : Filter 'jwtAuthFilter' configured for use
+2026-02-26T22:29:26.584+02:00  WARN 7700 --- [fitcoach] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-02-26T22:29:27.296+02:00  INFO 7700 --- [fitcoach] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/api'
+2026-02-26T22:29:27.305+02:00  INFO 7700 --- [fitcoach] [           main] com.fitcoach.FitCoachApplication         : Started FitCoachApplication in 6.416 seconds (process running for 6.986)
+2026-02-26T22:29:27.639+02:00  INFO 7700 --- [fitcoach] [           main] c.fitcoach.service.DataSeedingService    : Exercises already seeded.
+2026-02-26T22:29:27.644+02:00  INFO 7700 --- [fitcoach] [           main] c.fitcoach.service.DataSeedingService    : Ingredients already seeded.
+2026-02-26T22:30:26.666+02:00  INFO 7700 --- [fitcoach] [nio-8080-exec-2] o.a.c.c.C.[Tomcat].[localhost].[/api]    : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-02-26T22:30:26.667+02:00  INFO 7700 --- [fitcoach] [nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-02-26T22:30:26.670+02:00  INFO 7700 --- [fitcoach] [nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 3 ms
+2026-02-26T22:32:22.408+02:00  WARN 7700 --- [fitcoach] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Retrograde clock change detected (housekeeper delta=28s235ms), soft-evicting connections from pool.
+2026-02-26T22:48:01.022+02:00  WARN 7700 --- [fitcoach] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=15m38s614ms).
+2026-02-26T23:40:03.036+02:00  WARN 7700 --- [fitcoach] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Retrograde clock change detected (housekeeper delta=29s771ms), soft-evicting connections from pool.
+2026-02-27T00:14:32.813+02:00  WARN 7700 --- [fitcoach] [l-1 housekeeper] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Retrograde clock change detected (housekeeper delta=29s415ms), soft-evicting connections from pool.
