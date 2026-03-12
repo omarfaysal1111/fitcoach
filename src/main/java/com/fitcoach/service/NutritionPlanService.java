@@ -66,4 +66,32 @@ public class NutritionPlanService {
     public List<NutritionPlan> getPlansByCoach(Long coachId) {
         return nutritionPlanRepository.findByCoachId(coachId);
     }
+    
+    @Transactional(readOnly = true)
+    public List<NutritionPlan> getPlansByTrainee(Long traineeId) {
+        return nutritionPlanRepository.findByTraineesId(traineeId);
+    }
+
+    @Transactional
+    public NutritionPlan assignPlanToTrainees(Long planId, Long coachId, List<Long> traineeIds) {
+        NutritionPlan plan = nutritionPlanRepository.findById(planId)
+                .orElseThrow(() -> new ResourceNotFoundException("Nutrition plan not found"));
+
+        if (!plan.getCoach().getId().equals(coachId)) {
+            throw new IllegalArgumentException("You do not have permission to modify this plan");
+        }
+
+        List<Trainee> newTrainees = traineeRepository.findAllById(traineeIds);
+        if (newTrainees.size() != traineeIds.size()) {
+            throw new ResourceNotFoundException("One or more trainees not found");
+        }
+
+        for (Trainee t : newTrainees) {
+            if (!plan.getTrainees().contains(t)) {
+                plan.getTrainees().add(t);
+            }
+        }
+
+        return nutritionPlanRepository.save(plan);
+    }
 }

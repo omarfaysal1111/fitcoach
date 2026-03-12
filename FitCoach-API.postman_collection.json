@@ -6,10 +6,26 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl",       "value": "http://localhost:8080/api", "type": "string" },
-    { "key": "coachToken",    "value": "", "type": "string" },
-    { "key": "traineeToken",  "value": "", "type": "string" },
-    { "key": "invitationToken", "value": "", "type": "string" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api",
+      "type": "string"
+    },
+    {
+      "key": "coachToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "traineeToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "invitationToken",
+      "value": "",
+      "type": "string"
+    }
   ],
   "item": [
     {
@@ -19,12 +35,31 @@
           "name": "Register Coach",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/auth/coaches/register", "host": ["{{baseUrl}}"], "path": ["auth","coaches","register"] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/coaches/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "coaches",
+                "register"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"fullName\": \"John Coach\",\n  \"email\": \"john.coach@fitcoach.com\",\n  \"password\": \"password123\",\n  \"specialisation\": \"Strength & Conditioning\",\n  \"bio\": \"10+ years helping athletes reach peak performance.\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "description": "Public endpoint. Registers a new coach and returns a JWT token."
           },
@@ -48,12 +83,30 @@
           "name": "Login (Coach)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth","login"] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"john.coach@fitcoach.com\",\n  \"password\": \"password123\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "description": "Login with coach credentials. Token is auto-saved to {{coachToken}}."
           },
@@ -77,12 +130,30 @@
           "name": "Login (Trainee)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth","login"] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"alice.trainee@example.com\",\n  \"password\": \"password123\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "description": "Login with trainee credentials. Token is auto-saved to {{traineeToken}}."
           },
@@ -106,12 +177,31 @@
           "name": "Register Trainee (with Invitation Token)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/auth/trainees/register", "host": ["{{baseUrl}}"], "path": ["auth","trainees","register"] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/trainees/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "trainees",
+                "register"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"fullName\": \"Alice Trainee\",\n  \"email\": \"alice.trainee@example.com\",\n  \"password\": \"password123\",\n  \"invitationToken\": \"{{invitationToken}}\",\n  \"fitnessGoal\": \"Lose weight\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "description": "Public endpoint. Requires a valid invitationToken UUID generated by the coach. Run 'Create Invitation' first to populate {{invitationToken}}."
           },
@@ -140,8 +230,22 @@
           "name": "Get My Profile",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{coachToken}}" }],
-            "url": { "raw": "{{baseUrl}}/coaches/me", "host": ["{{baseUrl}}"], "path": ["coaches","me"] },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{coachToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/coaches/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "coaches",
+                "me"
+              ]
+            },
             "description": "Returns the authenticated coach's profile. Requires coach JWT."
           }
         },
@@ -150,14 +254,33 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{coachToken}}" },
-              { "key": "Content-Type",   "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{coachToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/coaches/me", "host": ["{{baseUrl}}"], "path": ["coaches","me"] },
+            "url": {
+              "raw": "{{baseUrl}}/coaches/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "coaches",
+                "me"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"fullName\": \"John Coach Updated\",\n  \"specialisation\": \"Functional Fitness & Mobility\",\n  \"bio\": \"Certified personal trainer with a decade of experience.\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "description": "Updates the authenticated coach's profile. All fields are optional."
           }
@@ -167,14 +290,33 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{coachToken}}" },
-              { "key": "Content-Type",   "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{coachToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/coaches/invitations", "host": ["{{baseUrl}}"], "path": ["coaches","invitations"] },
+            "url": {
+              "raw": "{{baseUrl}}/coaches/invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "coaches",
+                "invitations"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"alice.trainee@example.com\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "description": "Generates a UUID invitation token for the given email. Token is auto-saved to {{invitationToken}} for use in 'Register Trainee'."
           },
@@ -198,8 +340,22 @@
           "name": "Get My Invitations",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{coachToken}}" }],
-            "url": { "raw": "{{baseUrl}}/coaches/invitations", "host": ["{{baseUrl}}"], "path": ["coaches","invitations"] },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{coachToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/coaches/invitations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "coaches",
+                "invitations"
+              ]
+            },
             "description": "Lists all invitations sent by the authenticated coach."
           }
         },
@@ -207,8 +363,22 @@
           "name": "Get My Trainees",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{coachToken}}" }],
-            "url": { "raw": "{{baseUrl}}/coaches/trainees", "host": ["{{baseUrl}}"], "path": ["coaches","trainees"] },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{coachToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/coaches/trainees",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "coaches",
+                "trainees"
+              ]
+            },
             "description": "Lists all enrolled trainees who registered via the coach's invitation."
           }
         }
@@ -221,8 +391,22 @@
           "name": "Get My Profile",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{traineeToken}}" }],
-            "url": { "raw": "{{baseUrl}}/trainees/me", "host": ["{{baseUrl}}"], "path": ["trainees","me"] },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{traineeToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trainees/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "trainees",
+                "me"
+              ]
+            },
             "description": "Returns the authenticated trainee's profile. Requires trainee JWT."
           }
         },
@@ -231,14 +415,33 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{traineeToken}}" },
-              { "key": "Content-Type",   "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{traineeToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/trainees/me", "host": ["{{baseUrl}}"], "path": ["trainees","me"] },
+            "url": {
+              "raw": "{{baseUrl}}/trainees/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "trainees",
+                "me"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"fullName\": \"Alice Trainee Updated\",\n  \"fitnessGoal\": \"Build muscle\"\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "description": "Updates the authenticated trainee's profile. All fields are optional."
           }
@@ -247,9 +450,71 @@
           "name": "Get My Coach",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{traineeToken}}" }],
-            "url": { "raw": "{{baseUrl}}/trainees/coach", "host": ["{{baseUrl}}"], "path": ["trainees","coach"] },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{traineeToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trainees/coach",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "trainees",
+                "coach"
+              ]
+            },
             "description": "Returns the profile of the coach who invited this trainee."
+          }
+        },
+        {
+          "name": "Get My Nutrition Plans",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{traineeToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trainees/me/nutrition-plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "trainees",
+                "me",
+                "nutrition-plans"
+              ]
+            },
+            "description": "Returns the authenticated trainee's assigned nutrition plans."
+          }
+        },
+        {
+          "name": "Get My Exercise Plans",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{traineeToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trainees/me/exercise-plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "trainees",
+                "me",
+                "exercise-plans"
+              ]
+            },
+            "description": "Returns the authenticated trainee's assigned exercise plans."
           }
         }
       ]
@@ -261,8 +526,21 @@
           "name": "Get All Exercises",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{coachToken}}" }],
-            "url": { "raw": "{{baseUrl}}/exercises", "host": ["{{baseUrl}}"], "path": ["exercises"] },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{coachToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exercises",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exercises"
+              ]
+            },
             "description": "Lists all available exercises (seeded from wger open source API)."
           }
         },
@@ -270,8 +548,21 @@
           "name": "Get All Ingredients",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{coachToken}}" }],
-            "url": { "raw": "{{baseUrl}}/ingredients", "host": ["{{baseUrl}}"], "path": ["ingredients"] },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{coachToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ingredients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ingredients"
+              ]
+            },
             "description": "Lists all available ingredients (seeded from Open Food Facts)."
           }
         },
@@ -280,14 +571,33 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{coachToken}}" },
-              { "key": "Content-Type",   "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{coachToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/coaches/nutrition-plans", "host": ["{{baseUrl}}"], "path": ["coaches","nutrition-plans"] },
+            "url": {
+              "raw": "{{baseUrl}}/coaches/nutrition-plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "coaches",
+                "nutrition-plans"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"Weight Loss Plan\",\n  \"description\": \"A complete plan to drop body fat.\",\n  \"traineeIds\": [1],\n  \"meals\": [\n    {\n      \"name\": \"Breakfast\",\n      \"ingredientIds\": [1, 2],\n      \"customCalories\": null\n    },\n    {\n      \"name\": \"Lunch\",\n      \"ingredientIds\": [],\n      \"customCalories\": 600.0\n    }\n  ]\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "description": "Creates a new nutrition plan. Restricted to Coach role. Can add meals using predefined ingredient IDs or custom calories."
           }
@@ -296,9 +606,61 @@
           "name": "Get My Nutrition Plans",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{coachToken}}" }],
-            "url": { "raw": "{{baseUrl}}/coaches/nutrition-plans", "host": ["{{baseUrl}}"], "path": ["coaches","nutrition-plans"] },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{coachToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/coaches/nutrition-plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "coaches",
+                "nutrition-plans"
+              ]
+            },
             "description": "Retrieves the coach's nutrition plans. Restricted to Coach role."
+          }
+        },
+        {
+          "name": "Assign Nutrition Plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{coachToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/coaches/nutrition-plans/1/assign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "coaches",
+                "nutrition-plans",
+                "1",
+                "assign"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"traineeIds\": [1]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Assigns an existing nutrition plan to one or more trainees."
           }
         },
         {
@@ -306,14 +668,33 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{coachToken}}" },
-              { "key": "Content-Type",   "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{coachToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "url": { "raw": "{{baseUrl}}/coaches/exercise-plans", "host": ["{{baseUrl}}"], "path": ["coaches","exercise-plans"] },
+            "url": {
+              "raw": "{{baseUrl}}/coaches/exercise-plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "coaches",
+                "exercise-plans"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"Hypertrophy Phase 1\",\n  \"description\": \"A 4-week split to build muscle mass.\",\n  \"traineeIds\": [1],\n  \"workouts\": [\n    {\n      \"name\": \"Push Day\",\n      \"notes\": \"Focus on chest and triceps\",\n      \"exerciseIds\": [1, 2]\n    },\n    {\n      \"name\": \"Pull Day\",\n      \"notes\": \"Focus on back and biceps\",\n      \"exerciseIds\": [3]\n    }\n  ]\n}",
-              "options": { "raw": { "language": "json" } }
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "description": "Creates a new exercise plan for the coach and assigns it to trainees."
           }
@@ -322,9 +703,61 @@
           "name": "Get My Exercise Plans",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{coachToken}}" }],
-            "url": { "raw": "{{baseUrl}}/coaches/exercise-plans", "host": ["{{baseUrl}}"], "path": ["coaches","exercise-plans"] },
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{coachToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/coaches/exercise-plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "coaches",
+                "exercise-plans"
+              ]
+            },
             "description": "Retrieves the coach's exercise plans. Restricted to Coach role."
+          }
+        },
+        {
+          "name": "Assign Exercise Plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{coachToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/coaches/exercise-plans/1/assign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "coaches",
+                "exercise-plans",
+                "1",
+                "assign"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"traineeIds\": [1]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Assigns an existing exercise plan to one or more trainees."
           }
         }
       ]

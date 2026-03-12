@@ -1,5 +1,6 @@
 package com.fitcoach.domain.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -14,7 +15,6 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder
 public class Workout {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -36,5 +36,6 @@ public class Workout {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exercise_plan_id")
+    @JsonIgnore
     private ExercisePlan exercisePlan;
 }

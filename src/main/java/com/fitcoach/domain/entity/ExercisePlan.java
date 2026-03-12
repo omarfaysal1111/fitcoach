@@ -1,5 +1,7 @@
 package com.fitcoach.domain.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -12,6 +14,7 @@ import java.util.List;
 @Entity
 @Table(name = "exercise_plans")
 @EntityListeners(AuditingEntityListener.class)
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -31,6 +34,7 @@ public class ExercisePlan {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "coach_id", nullable = false)
+    @JsonIgnore
     private Coach coach;
 
     @ManyToMany(fetch = FetchType.LAZY)

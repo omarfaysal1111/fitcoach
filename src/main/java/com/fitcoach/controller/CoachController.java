@@ -3,6 +3,7 @@ package com.fitcoach.controller;
 import com.fitcoach.dto.request.InvitationRequest;
 import com.fitcoach.dto.request.UpdateCoachRequest;
 import com.fitcoach.dto.response.ApiResponse;
+import com.fitcoach.dto.response.CoachHomeResponse;
 import com.fitcoach.dto.response.CoachProfileResponse;
 import com.fitcoach.dto.response.InvitationResponse;
 import com.fitcoach.dto.response.TraineeProfileResponse;
@@ -31,6 +32,14 @@ public class CoachController {
     public ResponseEntity<ApiResponse<CoachProfileResponse>> getMyProfile(
             @AuthenticationPrincipal UserDetails principal) {
         return ResponseEntity.ok(ApiResponse.ok(coachService.getMyProfile(principal.getUsername())));
+    }
+
+    /** GET /api/coaches/home – aggregated data for coach home dashboard */
+    @GetMapping("/home")
+    public ResponseEntity<ApiResponse<CoachHomeResponse>> getHome(
+            @AuthenticationPrincipal UserDetails principal) {
+        CoachHomeResponse home = coachService.getHome(principal.getUsername());
+        return ResponseEntity.ok(ApiResponse.ok(home));
     }
 
     /** PUT /api/coaches/me – update profile */

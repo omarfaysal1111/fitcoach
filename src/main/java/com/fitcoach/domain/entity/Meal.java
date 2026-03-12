@@ -1,5 +1,6 @@
 package com.fitcoach.domain.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -35,5 +36,6 @@ public class Meal {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "nutrition_plan_id")
+    @JsonIgnore
     private NutritionPlan nutritionPlan;
 }

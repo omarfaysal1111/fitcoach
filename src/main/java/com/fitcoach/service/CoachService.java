@@ -2,7 +2,9 @@ package com.fitcoach.service;
 
 import com.fitcoach.domain.entity.Coach;
 import com.fitcoach.dto.request.UpdateCoachRequest;
+import com.fitcoach.dto.response.CoachHomeResponse;
 import com.fitcoach.dto.response.CoachProfileResponse;
+import com.fitcoach.dto.response.InvitationResponse;
 import com.fitcoach.dto.response.TraineeProfileResponse;
 import com.fitcoach.exception.ResourceNotFoundException;
 import com.fitcoach.repository.CoachRepository;
@@ -23,11 +25,44 @@ public class CoachService {
     private final CoachRepository coachRepository;
     private final TraineeRepository traineeRepository;
     private final UserRepository userRepository;
+    private final InvitationService invitationService;
 
     @Transactional(readOnly = true)
     public CoachProfileResponse getMyProfile(String email) {
         Coach coach = findCoachByEmail(email);
         return toResponse(coach);
+    }
+
+    /**
+     * Aggregated view used by the Coach Home screen in the mobile app.
+     * Combines the coach profile, all trainees, and all invitations
+     * into a single payload.
+     */
+    @Transactional(readOnly = true)
+    public CoachHomeResponse getHome(String email) {
+        Coach coach = findCoachByEmail(email);
+
+        List<TraineeProfileResponse> trainees = traineeRepository.findAllByCoachId(coach.getId())
+                .stream()
+                .map(t -> TraineeProfileResponse.builder()
+                        .id(t.getId())
+                        .userId(t.getUser().getId())
+                        .fullName(t.getUser().getFullName())
+                        .email(t.getUser().getEmail())
+                        .fitnessGoal(t.getFitnessGoal())
+                        .coachId(coach.getId())
+                        .coachName(coach.getUser().getFullName())
+                        .createdAt(t.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
+
+        List<InvitationResponse> invitations = invitationService.getInvitationsForCoach(email);
+
+        return CoachHomeResponse.builder()
+                .coach(toResponse(coach))
+                .trainees(trainees)
+                .invitations(invitations)
+                .build();
     }
 
     @Transactional
