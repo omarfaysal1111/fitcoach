@@ -16,4 +16,11 @@ public class TraineeProfileResponse {
     private Long coachId;
     private String coachName;
     private LocalDateTime createdAt;
+    private int workoutsCompletedToday;
+    private int workoutsPlannedToday;
+    private int mealsCompletedToday;
+    private int mealsPlannedToday;
+    private int workoutProgressPercent;
+    private int nutritionProgressPercent;
+    private int adherencePercent;
 }

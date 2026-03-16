@@ -1,6 +1,9 @@
 package com.fitcoach.service;
 
 import com.fitcoach.domain.entity.Coach;
+import com.fitcoach.domain.entity.ExercisePlan;
+import com.fitcoach.domain.entity.NutritionPlan;
+import com.fitcoach.domain.entity.Trainee;
 import com.fitcoach.dto.request.UpdateCoachRequest;
 import com.fitcoach.dto.response.CoachHomeResponse;
 import com.fitcoach.dto.response.CoachProfileResponse;
@@ -8,13 +11,18 @@ import com.fitcoach.dto.response.InvitationResponse;
 import com.fitcoach.dto.response.TraineeProfileResponse;
 import com.fitcoach.exception.ResourceNotFoundException;
 import com.fitcoach.repository.CoachRepository;
+import com.fitcoach.repository.ExercisePlanRepository;
+import com.fitcoach.repository.NutritionPlanRepository;
+import com.fitcoach.repository.TraineeMealCompletionRepository;
 import com.fitcoach.repository.TraineeRepository;
+import com.fitcoach.repository.TraineeWorkoutCompletionRepository;
 import com.fitcoach.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,6 +34,10 @@ public class CoachService {
     private final TraineeRepository traineeRepository;
     private final UserRepository userRepository;
     private final InvitationService invitationService;
+    private final ExercisePlanRepository exercisePlanRepository;
+    private final NutritionPlanRepository nutritionPlanRepository;
+    private final TraineeWorkoutCompletionRepository traineeWorkoutCompletionRepository;
+    private final TraineeMealCompletionRepository traineeMealCompletionRepository;
 
     @Transactional(readOnly = true)
     public CoachProfileResponse getMyProfile(String email) {
@@ -44,16 +56,7 @@ public class CoachService {
 
         List<TraineeProfileResponse> trainees = traineeRepository.findAllByCoachId(coach.getId())
                 .stream()
-                .map(t -> TraineeProfileResponse.builder()
-                        .id(t.getId())
-                        .userId(t.getUser().getId())
-                        .fullName(t.getUser().getFullName())
-                        .email(t.getUser().getEmail())
-                        .fitnessGoal(t.getFitnessGoal())
-                        .coachId(coach.getId())
-                        .coachName(coach.getUser().getFullName())
-                        .createdAt(t.getCreatedAt())
-                        .build())
+                .map(t -> toTraineeResponse(t, coach))
                 .collect(Collectors.toList());
 
         List<InvitationResponse> invitations = invitationService.getInvitationsForCoach(email);
@@ -88,16 +91,7 @@ public class CoachService {
         Coach coach = findCoachByEmail(email);
         return traineeRepository.findAllByCoachId(coach.getId())
                 .stream()
-                .map(t -> TraineeProfileResponse.builder()
-                        .id(t.getId())
-                        .userId(t.getUser().getId())
-                        .fullName(t.getUser().getFullName())
-                        .email(t.getUser().getEmail())
-                        .fitnessGoal(t.getFitnessGoal())
-                        .coachId(coach.getId())
-                        .coachName(coach.getUser().getFullName())
-                        .createdAt(t.getCreatedAt())
-                        .build())
+                .map(t -> toTraineeResponse(t, coach))
                 .collect(Collectors.toList());
     }
 
@@ -119,6 +113,69 @@ public class CoachService {
                 .bio(coach.getBio())
                 .traineeCount(coach.getTrainees().size())
                 .createdAt(coach.getCreatedAt())
+                .build();
+    }
+
+    private TraineeProfileResponse toTraineeResponse(Trainee trainee, Coach coach) {
+        LocalDate today = LocalDate.now();
+
+        List<ExercisePlan> assignedExercisePlans = exercisePlanRepository.findByTraineesId(trainee.getId());
+        List<NutritionPlan> assignedNutritionPlans = nutritionPlanRepository.findByTraineesId(trainee.getId());
+
+        java.util.Set<Long> assignedWorkoutIds = assignedExercisePlans.stream()
+                .flatMap(p -> p.getWorkouts().stream())
+                .map(w -> w.getId())
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        java.util.Set<Long> assignedMealIds = assignedNutritionPlans.stream()
+                .flatMap(p -> p.getMeals().stream())
+                .map(m -> m.getId())
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        int workoutsPlannedToday = assignedWorkoutIds.size();
+        int workoutsCompletedToday = (int) traineeWorkoutCompletionRepository
+                .findByTraineeIdAndCompletionDate(trainee.getId(), today)
+                .stream()
+                .map(c -> c.getWorkout().getId())
+                .filter(assignedWorkoutIds::contains)
+                .distinct()
+                .count();
+
+        int mealsPlannedToday = assignedMealIds.size();
+        int mealsCompletedToday = (int) traineeMealCompletionRepository
+                .findByTraineeIdAndCompletionDate(trainee.getId(), today)
+                .stream()
+                .map(c -> c.getMeal().getId())
+                .filter(assignedMealIds::contains)
+                .distinct()
+                .count();
+
+        int workoutProgressPercent = workoutsPlannedToday == 0
+                ? 0
+                : (int) Math.round((workoutsCompletedToday * 100.0) / workoutsPlannedToday);
+        int nutritionProgressPercent = mealsPlannedToday == 0
+                ? 0
+                : (int) Math.round((mealsCompletedToday * 100.0) / mealsPlannedToday);
+        int adherencePercent = (workoutProgressPercent + nutritionProgressPercent) / 2;
+
+        return TraineeProfileResponse.builder()
+                .id(trainee.getId())
+                .userId(trainee.getUser().getId())
+                .fullName(trainee.getUser().getFullName())
+                .email(trainee.getUser().getEmail())
+                .fitnessGoal(trainee.getFitnessGoal())
+                .coachId(coach.getId())
+                .coachName(coach.getUser().getFullName())
+                .createdAt(trainee.getCreatedAt())
+                .workoutsCompletedToday(workoutsCompletedToday)
+                .workoutsPlannedToday(workoutsPlannedToday)
+                .mealsCompletedToday(mealsCompletedToday)
+                .mealsPlannedToday(mealsPlannedToday)
+                .workoutProgressPercent(workoutProgressPercent)
+                .nutritionProgressPercent(nutritionProgressPercent)
+                .adherencePercent(adherencePercent)
                 .build();
     }
 }

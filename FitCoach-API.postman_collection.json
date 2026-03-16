@@ -381,6 +381,29 @@
             },
             "description": "Lists all enrolled trainees who registered via the coach's invitation."
           }
+        },
+        {
+          "name": "Coach Home – Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{coachToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/coaches/home",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "coaches",
+                "home"
+              ]
+            },
+            "description": "Aggregated coach home data: coach profile, trainees list (for needs attention / top performers / sessions), and invitations (for pending invites)."
+          }
         }
       ]
     },
@@ -515,6 +538,107 @@
               ]
             },
             "description": "Returns the authenticated trainee's assigned exercise plans."
+          }
+        },
+        {
+          "name": "Trainee Dashboard – Today",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{traineeToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trainees/me/dashboard-today",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "trainees",
+                "me",
+                "dashboard-today"
+              ]
+            },
+            "description": "Aggregated trainee home data for 'Today' card: profile, coach, today workout & nutrition summaries, weekly goals, achievements."
+          }
+        },
+        {
+          "name": "Complete Workout (Today)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{traineeToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trainees/me/workouts/1/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "trainees",
+                "me",
+                "workouts",
+                "1",
+                "complete"
+              ]
+            },
+            "description": "Marks workout ID 1 as completed for today for the authenticated trainee. Dashboard uses this to calculate exercisesDone."
+          }
+        },
+        {
+          "name": "Complete Meal (Today)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{traineeToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trainees/me/meals/1/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "trainees",
+                "me",
+                "meals",
+                "1",
+                "complete"
+              ]
+            },
+            "description": "Marks meal ID 1 as completed/logged for today for the authenticated trainee. Dashboard uses this to calculate caloriesConsumed."
+          }
+        },
+        {
+          "name": "Exercise Plan Detail (for Today)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{traineeToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trainees/me/exercise-plans/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "trainees",
+                "me",
+                "exercise-plans",
+                "1"
+              ]
+            },
+            "description": "Detailed view of exercise plan ID 1 for this trainee: stats (exercises, duration, calories, sets) and numbered exercise list for the workout detail screen."
           }
         }
       ]
@@ -689,14 +813,14 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Hypertrophy Phase 1\",\n  \"description\": \"A 4-week split to build muscle mass.\",\n  \"traineeIds\": [1],\n  \"workouts\": [\n    {\n      \"name\": \"Push Day\",\n      \"notes\": \"Focus on chest and triceps\",\n      \"exerciseIds\": [1, 2]\n    },\n    {\n      \"name\": \"Pull Day\",\n      \"notes\": \"Focus on back and biceps\",\n      \"exerciseIds\": [3]\n    }\n  ]\n}",
+              "raw": "{\n  \"title\": \"Hypertrophy Phase 1\",\n  \"description\": \"A 4-week split to build muscle mass.\",\n  \"traineeIds\": [1],\n  \"workouts\": [\n    {\n      \"name\": \"Push Day\",\n      \"notes\": \"Focus on chest and triceps\",\n      \"items\": [\n        { \"exerciseId\": 1, \"order\": 1, \"sets\": 4, \"reps\": \"8-10\", \"load\": \"60 kg\", \"rest\": \"90s\" },\n        { \"exerciseId\": 2, \"order\": 2, \"sets\": 3, \"reps\": \"12\", \"load\": \"Bodyweight\", \"rest\": \"60s\" }\n      ]\n    },\n    {\n      \"name\": \"Pull Day\",\n      \"notes\": \"Focus on back and biceps\",\n      \"items\": [\n        { \"exerciseId\": 3, \"order\": 1, \"sets\": 3, \"reps\": \"8-10\", \"load\": \"40 kg\", \"rest\": \"90s\" }\n      ]\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "Creates a new exercise plan for the coach and assigns it to trainees."
+            "description": "Creates a new exercise plan for the coach and assigns it to trainees, including per-exercise sets/reps/load/rest."
           }
         },
         {

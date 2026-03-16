@@ -1,8 +1,14 @@
 package com.fitcoach.service;
 
-import com.fitcoach.domain.entity.*;
+import com.fitcoach.domain.entity.Coach;
+import com.fitcoach.domain.entity.Exercise;
+import com.fitcoach.domain.entity.ExercisePlan;
+import com.fitcoach.domain.entity.Trainee;
+import com.fitcoach.domain.entity.Workout;
+import com.fitcoach.domain.entity.WorkoutExercise;
 import com.fitcoach.dto.request.CreateExercisePlanRequest;
 import com.fitcoach.dto.request.CreateWorkoutRequest;
+import com.fitcoach.dto.request.WorkoutExerciseItemRequest;
 import com.fitcoach.exception.ResourceNotFoundException;
 import com.fitcoach.repository.CoachRepository;
 import com.fitcoach.repository.ExercisePlanRepository;
@@ -12,9 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -89,21 +93,52 @@ public class ExercisePlanService {
     }
 
     private Workout createWorkout(CreateWorkoutRequest request, ExercisePlan plan) {
-        Set<Exercise> exercises = new HashSet<>();
-        
-        if (request.getExerciseIds() != null && !request.getExerciseIds().isEmpty()) {
-            List<Exercise> retrievedExercises = exerciseRepository.findAllById(request.getExerciseIds());
-            if (retrievedExercises.size() != request.getExerciseIds().size()) {
-                 throw new ResourceNotFoundException("One or more exercises not found");
-            }
-            exercises.addAll(retrievedExercises);
-        }
-
-        return Workout.builder()
+        Workout workout = Workout.builder()
                 .name(request.getName())
                 .notes(request.getNotes())
-                .exercises(exercises)
                 .exercisePlan(plan)
                 .build();
+
+        if (request.getItems() != null && !request.getItems().isEmpty()) {
+            for (WorkoutExerciseItemRequest item : request.getItems()) {
+                Exercise exercise = exerciseRepository.findById(item.getExerciseId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Exercise not found with id: " + item.getExerciseId()));
+
+                WorkoutExercise we = WorkoutExercise.builder()
+                        .workout(workout)
+                        .exercise(exercise)
+                        .orderIndex(item.getOrder())
+                        .sets(item.getSets())
+                        .reps(item.getReps())
+                        .load(item.getLoad())
+                        .rest(item.getRest())
+                        .build();
+
+                workout.getWorkoutExercises().add(we);
+            }
+        } else if (request.getExerciseIds() != null && !request.getExerciseIds().isEmpty()) {
+            // Backward-compatible path for old payloads that only send exerciseIds.
+            int order = 1;
+            for (Long exerciseId : request.getExerciseIds()) {
+                Exercise exercise = exerciseRepository.findById(exerciseId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Exercise not found with id: " + exerciseId));
+
+                WorkoutExercise we = WorkoutExercise.builder()
+                        .workout(workout)
+                        .exercise(exercise)
+                        .orderIndex(order++)
+                        .sets(3)
+                        .reps("10-12")
+                        .load(null)
+                        .rest("60s")
+                        .build();
+
+                workout.getWorkoutExercises().add(we);
+            }
+        } else {
+            throw new IllegalArgumentException("Each workout must include at least one exercise item");
+        }
+
+        return workout;
     }
 }

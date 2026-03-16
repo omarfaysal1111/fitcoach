@@ -7,6 +7,7 @@ import com.fitcoach.dto.response.ApiResponse;
 import com.fitcoach.dto.response.CoachProfileResponse;
 import com.fitcoach.dto.response.TraineeDashboardTodayResponse;
 import com.fitcoach.dto.response.TraineeExercisePlanDetailResponse;
+import com.fitcoach.dto.response.TraineePlanSummaryResponse;
 import com.fitcoach.dto.response.TraineeProfileResponse;
 import com.fitcoach.service.ExercisePlanService;
 import com.fitcoach.service.NutritionPlanService;
@@ -78,20 +79,52 @@ public class TraineeController {
         return ResponseEntity.ok(ApiResponse.ok(traineeService.getMyCoach(principal.getUsername())));
     }
     
-    /** GET /api/trainees/me/nutrition-plans – get my assigned nutrition plans */
+    /** GET /api/trainees/me/nutrition-plans – get my assigned nutrition plans (summaries only) */
     @GetMapping("/me/nutrition-plans")
-    public ResponseEntity<ApiResponse<List<NutritionPlan>>> getMyNutritionPlans(
+    public ResponseEntity<ApiResponse<List<TraineePlanSummaryResponse>>> getMyNutritionPlans(
             @AuthenticationPrincipal UserDetails principal) {
         Long traineeId = traineeService.getTraineeByEmail(principal.getUsername()).getId();
-        return ResponseEntity.ok(ApiResponse.ok("Nutrition plans retrieved successfully", nutritionPlanService.getPlansByTrainee(traineeId)));
+        List<NutritionPlan> plans = nutritionPlanService.getPlansByTrainee(traineeId);
+
+        // Pick the latest plan by createdAt (if any), null-safe
+        List<TraineePlanSummaryResponse> summaries = plans.stream()
+                .max(java.util.Comparator.comparing(
+                        NutritionPlan::getCreatedAt,
+                        java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                .map(p -> List.of(TraineePlanSummaryResponse.builder()
+                        .id(p.getId())
+                        .title(p.getTitle())
+                        .description(p.getDescription())
+                        .type("NUTRITION")
+                        .build()))
+                .orElseGet(List::of);
+
+        return ResponseEntity.ok(
+                ApiResponse.ok("Nutrition plans retrieved successfully", summaries));
     }
 
-    /** GET /api/trainees/me/exercise-plans – get my assigned exercise plans */
+    /** GET /api/trainees/me/exercise-plans – get my assigned exercise plans (summaries only) */
     @GetMapping("/me/exercise-plans")
-    public ResponseEntity<ApiResponse<List<ExercisePlan>>> getMyExercisePlans(
+    public ResponseEntity<ApiResponse<List<TraineePlanSummaryResponse>>> getMyExercisePlans(
             @AuthenticationPrincipal UserDetails principal) {
         Long traineeId = traineeService.getTraineeByEmail(principal.getUsername()).getId();
-        return ResponseEntity.ok(ApiResponse.ok("Exercise plans retrieved successfully", exercisePlanService.getPlansByTrainee(traineeId)));
+        List<ExercisePlan> plans = exercisePlanService.getPlansByTrainee(traineeId);
+
+        // Pick the latest plan by createdAt (if any), null-safe
+        List<TraineePlanSummaryResponse> summaries = plans.stream()
+                .max(java.util.Comparator.comparing(
+                        ExercisePlan::getCreatedAt,
+                        java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                .map(p -> List.of(TraineePlanSummaryResponse.builder()
+                        .id(p.getId())
+                        .title(p.getTitle())
+                        .description(p.getDescription())
+                        .type("EXERCISE")
+                        .build()))
+                .orElseGet(List::of);
+
+        return ResponseEntity.ok(
+                ApiResponse.ok("Exercise plans retrieved successfully", summaries));
     }
 
     /** GET /api/trainees/me/exercise-plans/{planId} – detailed view of a specific plan for the trainee */

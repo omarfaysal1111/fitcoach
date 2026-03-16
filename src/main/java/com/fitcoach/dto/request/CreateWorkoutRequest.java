@@ -7,5 +7,7 @@ import java.util.List;
 public class CreateWorkoutRequest {
     private String name;
     private String notes;
+    private List<WorkoutExerciseItemRequest> items;
+    // Backward compatibility for older clients/Postman bodies
     private List<Long> exerciseIds;
 }

@@ -16,5 +16,8 @@ public interface TraineeWorkoutCompletionRepository extends JpaRepository<Traine
 
     List<TraineeWorkoutCompletion> findByTraineeIdAndWorkoutExercisePlanIdAndCompletionDate(
             Long traineeId, Long exercisePlanId, LocalDate completionDate);
+
+    List<TraineeWorkoutCompletion> findByTraineeIdAndCompletionDate(
+            Long traineeId, LocalDate completionDate);
 }
 

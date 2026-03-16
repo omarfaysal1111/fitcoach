@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "workouts")
@@ -25,14 +25,9 @@ public class Workout {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "workout_exercises",
-        joinColumns = @JoinColumn(name = "workout_id"),
-        inverseJoinColumns = @JoinColumn(name = "exercise_id")
-    )
+    @OneToMany(mappedBy = "workout", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private Set<Exercise> exercises = new HashSet<>();
+    private List<WorkoutExercise> workoutExercises = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exercise_plan_id")

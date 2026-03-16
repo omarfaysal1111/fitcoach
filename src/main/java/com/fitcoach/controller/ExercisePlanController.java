@@ -62,7 +62,7 @@ public class ExercisePlanController {
     }
 
     @PostMapping("/{planId}/assign")
-    public ResponseEntity<ApiResponse<ExercisePlan>> assignPlanToTrainees(
+    public ResponseEntity<ApiResponse<String>> assignPlanToTrainees(
             @PathVariable Long planId,
             @RequestBody AssignPlanRequest request,
             Authentication authentication) {
@@ -81,8 +81,8 @@ public class ExercisePlanController {
                 .orElseThrow(() -> new ResourceNotFoundException("Coach not found"));
 
         try {
-            ExercisePlan plan = exercisePlanService.assignPlanToTrainees(planId, coach.getId(), request.getTraineeIds());
-            return ResponseEntity.ok(ApiResponse.ok("Plan assigned successfully", plan));
+            exercisePlanService.assignPlanToTrainees(planId, coach.getId(), request.getTraineeIds());
+            return ResponseEntity.ok(ApiResponse.ok("Plan assigned successfully"));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(403).body(ApiResponse.error(e.getMessage()));
         }

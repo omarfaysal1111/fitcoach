@@ -8,6 +8,7 @@ import com.fitcoach.domain.entity.Trainee;
 import com.fitcoach.domain.entity.TraineeMealCompletion;
 import com.fitcoach.domain.entity.TraineeWorkoutCompletion;
 import com.fitcoach.domain.entity.Workout;
+import com.fitcoach.domain.entity.WorkoutExercise;
 import com.fitcoach.dto.request.UpdateTraineeRequest;
 import com.fitcoach.dto.response.CoachProfileResponse;
 import com.fitcoach.dto.response.TraineeDashboardTodayResponse;
@@ -73,12 +74,16 @@ public class TraineeService {
 
         java.util.List<ExercisePlan> exercisePlans =
                 exercisePlanRepository.findByTraineesId(trainee.getId());
-        ExercisePlan todayExercisePlan = exercisePlans.isEmpty() ? null : exercisePlans.getFirst();
+        ExercisePlan todayExercisePlan = exercisePlans.stream()
+                .max(java.util.Comparator.comparing(
+                        ExercisePlan::getCreatedAt,
+                        java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                .orElse(null);
 
         TraineeDashboardTodayResponse.TodayWorkoutSummary workoutSummary = null;
         if (todayExercisePlan != null) {
             int totalExercises = todayExercisePlan.getWorkouts().stream()
-                    .mapToInt(w -> w.getExercises().size())
+                    .mapToInt(w -> w.getWorkoutExercises().size())
                     .sum();
 
             var completionsForPlanToday =
@@ -87,7 +92,7 @@ public class TraineeService {
 
             int exercisesDone = completionsForPlanToday.stream()
                     .map(TraineeWorkoutCompletion::getWorkout)
-                    .mapToInt(w -> w.getExercises().size())
+                    .mapToInt(w -> w.getWorkoutExercises().size())
                     .sum();
 
             int durationMinutes = todayExercisePlan.getWorkouts().size() * 10;
@@ -106,7 +111,11 @@ public class TraineeService {
 
         java.util.List<NutritionPlan> nutritionPlans =
                 nutritionPlanRepository.findByTraineesId(trainee.getId());
-        NutritionPlan todayNutritionPlan = nutritionPlans.isEmpty() ? null : nutritionPlans.getFirst();
+        NutritionPlan todayNutritionPlan = nutritionPlans.stream()
+                .max(java.util.Comparator.comparing(
+                        NutritionPlan::getCreatedAt,
+                        java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                .orElse(null);
 
         TraineeDashboardTodayResponse.TodayNutritionSummary nutritionSummary = null;
         if (todayNutritionPlan != null) {
@@ -173,30 +182,30 @@ public class TraineeService {
         }
 
         int exercisesTotal = plan.getWorkouts().stream()
-                .mapToInt(w -> w.getExercises().size())
+                .mapToInt(w -> w.getWorkoutExercises().size())
                 .sum();
 
         int durationMinutes = plan.getWorkouts().size() * 10;
         int estimatedCalories = plan.getWorkouts().size() * 80;
 
-        int setsTotal = exercisesTotal * 3; // simple default: 3 sets per exercise
+        int setsTotal = plan.getWorkouts().stream()
+                .flatMap(w -> w.getWorkoutExercises().stream())
+                .mapToInt(WorkoutExercise::getSets)
+                .sum();
 
         var itemsBuilder = new java.util.ArrayList<TraineeExercisePlanDetailResponse.ExerciseItem>();
-        int order = 1;
-        for (Workout workout : plan.getWorkouts()) {
-            for (com.fitcoach.domain.entity.Exercise exercise : workout.getExercises()) {
-                itemsBuilder.add(TraineeExercisePlanDetailResponse.ExerciseItem.builder()
-                        .order(order++)
-                        .name(exercise.getName())
-                        .sets(3)
-                        .reps("10-12")
-                        .load(null)
-                        .rest("60s")
-                        .muscleGroup(exercise.getTargetedMuscle())
+        plan.getWorkouts().forEach(workout -> workout.getWorkoutExercises().stream()
+                .sorted(java.util.Comparator.comparingInt(WorkoutExercise::getOrderIndex))
+                .forEach(we -> itemsBuilder.add(TraineeExercisePlanDetailResponse.ExerciseItem.builder()
+                        .order(we.getOrderIndex())
+                        .name(we.getExercise().getName())
+                        .sets(we.getSets())
+                        .reps(we.getReps())
+                        .load(we.getLoad())
+                        .rest(we.getRest())
+                        .muscleGroup(we.getExercise().getTargetedMuscle())
                         .status("not_started")
-                        .build());
-            }
-        }
+                        .build())));
 
         return TraineeExercisePlanDetailResponse.builder()
                 .id(plan.getId())
