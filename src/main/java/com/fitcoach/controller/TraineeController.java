@@ -1,13 +1,14 @@
 package com.fitcoach.controller;
 
-import com.fitcoach.domain.entity.ExercisePlan;
 import com.fitcoach.domain.entity.NutritionPlan;
+import com.fitcoach.domain.entity.WorkoutPlan;
 import com.fitcoach.dto.request.UpdateTraineeRequest;
 import com.fitcoach.dto.response.ApiResponse;
 import com.fitcoach.dto.response.CoachProfileResponse;
 import com.fitcoach.dto.response.TraineeDashboardTodayResponse;
 import com.fitcoach.dto.response.TraineeExercisePlanDetailResponse;
 import com.fitcoach.dto.response.TraineePlanSummaryResponse;
+import com.fitcoach.dto.response.TraineeWorkoutPlanSessionsResponse;
 import com.fitcoach.dto.response.TraineeProfileResponse;
 import com.fitcoach.service.ExercisePlanService;
 import com.fitcoach.service.NutritionPlanService;
@@ -20,6 +21,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/trainees")
@@ -45,13 +47,13 @@ public class TraineeController {
                 ApiResponse.ok(traineeService.getTodayDashboard(principal.getUsername())));
     }
 
-    /** POST /api/trainees/me/workouts/{workoutId}/complete – mark a workout as completed today */
-    @PostMapping("/me/workouts/{workoutId}/complete")
-    public ResponseEntity<ApiResponse<String>> completeWorkout(
+    /** POST /api/trainees/me/plan-sessions/{planSessionId}/complete – mark a plan session (plan day) completed today */
+    @PostMapping("/me/plan-sessions/{planSessionId}/complete")
+    public ResponseEntity<ApiResponse<String>> completePlanSession(
             @AuthenticationPrincipal UserDetails principal,
-            @PathVariable Long workoutId) {
-        traineeService.completeWorkout(principal.getUsername(), workoutId);
-        return ResponseEntity.ok(ApiResponse.ok("Workout completed"));
+            @PathVariable UUID planSessionId) {
+        traineeService.completePlanSession(principal.getUsername(), planSessionId);
+        return ResponseEntity.ok(ApiResponse.ok("Plan session completed"));
     }
 
     /** POST /api/trainees/me/meals/{mealId}/complete – mark a meal as completed/logged today */
@@ -92,7 +94,7 @@ public class TraineeController {
                         NutritionPlan::getCreatedAt,
                         java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
                 .map(p -> List.of(TraineePlanSummaryResponse.builder()
-                        .id(p.getId())
+                        .id(String.valueOf(p.getId()))
                         .title(p.getTitle())
                         .description(p.getDescription())
                         .type("NUTRITION")
@@ -108,15 +110,14 @@ public class TraineeController {
     public ResponseEntity<ApiResponse<List<TraineePlanSummaryResponse>>> getMyExercisePlans(
             @AuthenticationPrincipal UserDetails principal) {
         Long traineeId = traineeService.getTraineeByEmail(principal.getUsername()).getId();
-        List<ExercisePlan> plans = exercisePlanService.getPlansByTrainee(traineeId);
+        List<WorkoutPlan> plans = exercisePlanService.getPlansByTrainee(traineeId);
 
-        // Pick the latest plan by createdAt (if any), null-safe
         List<TraineePlanSummaryResponse> summaries = plans.stream()
                 .max(java.util.Comparator.comparing(
-                        ExercisePlan::getCreatedAt,
+                        WorkoutPlan::getCreatedAt,
                         java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
                 .map(p -> List.of(TraineePlanSummaryResponse.builder()
-                        .id(p.getId())
+                        .id(p.getId().toString())
                         .title(p.getTitle())
                         .description(p.getDescription())
                         .type("EXERCISE")
@@ -131,9 +132,19 @@ public class TraineeController {
     @GetMapping("/me/exercise-plans/{planId}")
     public ResponseEntity<ApiResponse<TraineeExercisePlanDetailResponse>> getMyExercisePlanDetail(
             @AuthenticationPrincipal UserDetails principal,
-            @PathVariable Long planId) {
+            @PathVariable UUID planId) {
         TraineeExercisePlanDetailResponse detail =
                 traineeService.getExercisePlanDetail(principal.getUsername(), planId);
         return ResponseEntity.ok(ApiResponse.ok(detail));
+    }
+
+    /** GET /api/trainees/me/exercise-plans/{planId}/sessions – plan sessions only (no exercise lines) */
+    @GetMapping("/me/exercise-plans/{planId}/sessions")
+    public ResponseEntity<ApiResponse<TraineeWorkoutPlanSessionsResponse>> getMyWorkoutPlanSessions(
+            @AuthenticationPrincipal UserDetails principal,
+            @PathVariable UUID planId) {
+        TraineeWorkoutPlanSessionsResponse body =
+                traineeService.getWorkoutPlanSessions(principal.getUsername(), planId);
+        return ResponseEntity.ok(ApiResponse.ok(body));
     }
 }

@@ -2,51 +2,143 @@ package com.fitcoach.service;
 
 import com.fitcoach.domain.entity.Exercise;
 import com.fitcoach.domain.entity.Ingredient;
+import com.fitcoach.dto.response.CatalogSeedResponse;
 import com.fitcoach.repository.ExerciseRepository;
 import com.fitcoach.repository.IngredientRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class DataSeedingService implements CommandLineRunner {
 
+    private static final String WGER_BASE = "https://wger.de/api/v2";
+    private static final int PAGE_SIZE = 100;
+    private static final int MAX_INGREDIENTS = 500;
+
     private final ExerciseRepository exerciseRepository;
     private final IngredientRepository ingredientRepository;
+    private final TransactionTemplate transactionTemplate;
+
+    public DataSeedingService(
+            ExerciseRepository exerciseRepository,
+            IngredientRepository ingredientRepository,
+            PlatformTransactionManager transactionManager) {
+        this.exerciseRepository = exerciseRepository;
+        this.ingredientRepository = ingredientRepository;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+    }
 
     @Override
     public void run(String... args) {
-        seedExercises();
-        seedIngredients();
+        if (exerciseRepository.count() == 0) {
+            int n = fetchAndPersistExercises();
+            log.info("Startup: seeded {} exercises from wger.", n);
+        } else {
+            log.info("Exercises already present — skipping startup seed.");
+        }
+        if (ingredientRepository.count() == 0) {
+            int n = fetchAndPersistIngredients();
+            log.info("Startup: seeded {} ingredients from wger.", n);
+        } else {
+            log.info("Ingredients already present — skipping startup seed.");
+        }
     }
 
-    private void seedExercises() {
-        if (exerciseRepository.count() > 0) {
-            log.info("Exercises already seeded.");
-            return;
+    /**
+     * Fetches from wger and persists rows. If {@code replaceExisting}, clears catalog tables first
+     * (fails if exercises/ingredients are still referenced by plans or meals).
+     */
+    public CatalogSeedResponse seedCatalog(boolean replaceExisting) {
+        if (replaceExisting) {
+            try {
+                transactionTemplate.executeWithoutResult(status -> {
+                    exerciseRepository.deleteAllInBatch();
+                    ingredientRepository.deleteAllInBatch();
+                });
+            } catch (Exception e) {
+                log.error("Could not clear catalog: {}", e.getMessage());
+                return CatalogSeedResponse.builder()
+                        .exercisesSaved(0)
+                        .ingredientsSaved(0)
+                        .replacedExisting(true)
+                        .detail("Clear failed (likely FK from meals/plan lines). Truncate those tables or use replace=false when catalog is empty. "
+                                + e.getMessage())
+                        .build();
+            }
         }
-        log.info("Seeding exercises from open source API...");
+
+        long exercisesBefore = exerciseRepository.count();
+        long ingredientsBefore = ingredientRepository.count();
+
+        int exercisesSaved = 0;
+        int ingredientsSaved = 0;
+
+        if (replaceExisting || exercisesBefore == 0) {
+            exercisesSaved = fetchAndPersistExercises();
+        } else {
+            log.info("Exercises not empty — skipped (pass replace=true to re-download).");
+        }
+
+        if (replaceExisting || ingredientsBefore == 0) {
+            ingredientsSaved = fetchAndPersistIngredients();
+        } else {
+            log.info("Ingredients not empty — skipped (pass replace=true to re-download).");
+        }
+
+        String detail = "OK";
+        if ((replaceExisting || exercisesBefore == 0) && exercisesSaved == 0) {
+            detail = "Exercise seed produced 0 rows — check logs / network / wger.";
+        } else if ((replaceExisting || ingredientsBefore == 0) && ingredientsSaved == 0) {
+            detail = "Ingredient seed produced 0 rows — check logs / network / wger.";
+        }
+
+        return CatalogSeedResponse.builder()
+                .exercisesSaved(exercisesSaved)
+                .ingredientsSaved(ingredientsSaved)
+                .replacedExisting(replaceExisting)
+                .detail(detail)
+                .build();
+    }
+
+    private int fetchAndPersistExercises() {
+        log.info("Fetching English exercises from wger...");
         try {
             RestTemplate restTemplate = new RestTemplate();
-            // Using wger API for exercises as an example of open source DB
-            String url = "https://wger.de/api/v2/exerciseinfo/?language=2&limit=20";
-            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
-            if (response != null && response.containsKey("results")) {
-                List<Map<String, Object>> results = (List<Map<String, Object>>) response.get("results");
-                List<Exercise> exercises = new ArrayList<>();
+            List<Exercise> exercises = new ArrayList<>();
+            String url = WGER_BASE + "/exerciseinfo/?language=2&limit=" + PAGE_SIZE + "&offset=0";
+
+            while (url != null) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+                if (response == null) {
+                    break;
+                }
+
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> results =
+                        (List<Map<String, Object>>) response.get("results");
+                if (results == null || results.isEmpty()) {
+                    break;
+                }
+
                 for (Map<String, Object> result : results) {
-                    String name = "Unknown Exercise";
+                    String name = null;
                     String description = "";
-                    if (result.containsKey("translations")) {
-                        List<Map<String, Object>> translations = (List<Map<String, Object>>) result.get("translations");
+
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> translations =
+                            (List<Map<String, Object>>) result.get("translations");
+
+                    if (translations != null) {
                         for (Map<String, Object> t : translations) {
                             if (Integer.valueOf(2).equals(t.get("language"))) {
                                 name = (String) t.get("name");
@@ -54,72 +146,106 @@ public class DataSeedingService implements CommandLineRunner {
                                 break;
                             }
                         }
-                        if (name.equals("Unknown Exercise") && !translations.isEmpty()) {
+                        if ((name == null || name.isBlank()) && !translations.isEmpty()) {
                             name = (String) translations.get(0).get("name");
                             description = (String) translations.get(0).get("description");
                         }
                     }
-                    
-                    Map<String, Object> category = (Map<String, Object>) result.get("category");
-                    String categoryName = category != null ? (String) category.get("name") : "General";
 
-                    Exercise exercise = Exercise.builder()
-                            .name(name)
-                            .description(description)
-                            .videoLink("https://wger.de/api/v2/video/?exercise=" + result.get("id"))
-                            .targetedMuscle(categoryName)
-                            .build();
-                    exercises.add(exercise);
+                    if (name == null || name.isBlank()) {
+                        continue;
+                    }
+
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> category = (Map<String, Object>) result.get("category");
+                    String muscle = category != null ? (String) category.get("name") : "General";
+
+                    exercises.add(Exercise.builder()
+                            .name(name.trim())
+                            .description(description != null ? description.trim() : "")
+                            .targetedMuscle(muscle)
+                            .videoLink(WGER_BASE + "/video/?exercise=" + result.get("id"))
+                            .build());
                 }
-                exerciseRepository.saveAll(exercises);
-                log.info("Seeded {} exercises.", exercises.size());
+
+                url = (String) response.get("next");
+                log.info("  → {} exercises parsed...", exercises.size());
             }
+
+            exerciseRepository.saveAll(exercises);
+            log.info("Persisted {} exercises.", exercises.size());
+            return exercises.size();
+
         } catch (Exception e) {
-            log.error("Failed to seed exercises: {}", e.getMessage());
+            log.error("Failed to seed exercises: {}", e.getMessage(), e);
+            return 0;
         }
     }
 
-    private void seedIngredients() {
-        if (ingredientRepository.count() > 0) {
-            log.info("Ingredients already seeded.");
-            return;
-        }
-        log.info("Seeding ingredients from open source API...");
+    private int fetchAndPersistIngredients() {
+        log.info("Fetching up to {} English ingredients from wger...", MAX_INGREDIENTS);
         try {
             RestTemplate restTemplate = new RestTemplate();
-            // Using a public open food facts search API for basic ingredients
-            String url = "https://world.openfoodfacts.org/cgi/search.pl?search_terms=basic&search_simple=1&action=process&json=1&page_size=20";
-            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
-            if (response != null && response.containsKey("products")) {
-                List<Map<String, Object>> products = (List<Map<String, Object>>) response.get("products");
-                List<Ingredient> ingredients = new ArrayList<>();
-                for (Map<String, Object> product : products) {
-                    String name = (String) product.get("product_name");
-                    Map<String, Object> nutriments = (Map<String, Object>) product.get("nutriments");
-                    Double calories = 0.0;
-                    if (nutriments != null && nutriments.containsKey("energy-kcal_100g")) {
-                        Object kcal = nutriments.get("energy-kcal_100g");
-                        if (kcal instanceof Number) {
-                            calories = ((Number) kcal).doubleValue();
-                        } else if (kcal instanceof String) {
-                            try {
-                                calories = Double.parseDouble((String) kcal);
-                            } catch (NumberFormatException ignored) {}
-                        }
-                    }
-                    if (name != null && !name.isEmpty()) {
-                        Ingredient ingredient = Ingredient.builder()
-                                .name(name)
-                                .calories(calories)
-                                .build();
-                        ingredients.add(ingredient);
-                    }
+            List<Ingredient> ingredients = new ArrayList<>();
+            String url = WGER_BASE + "/ingredient/?format=json&language=2&limit=" + PAGE_SIZE + "&offset=0";
+
+            while (url != null && ingredients.size() < MAX_INGREDIENTS) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+                if (response == null) {
+                    break;
                 }
-                ingredientRepository.saveAll(ingredients);
-                log.info("Seeded {} ingredients.", ingredients.size());
+
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> results =
+                        (List<Map<String, Object>>) response.get("results");
+                if (results == null || results.isEmpty()) {
+                    break;
+                }
+
+                for (Map<String, Object> item : results) {
+                    if (ingredients.size() >= MAX_INGREDIENTS) {
+                        break;
+                    }
+
+                    String name = (String) item.get("name");
+                    if (name == null || name.isBlank()) {
+                        continue;
+                    }
+
+                    Double calories = extractDouble(item.get("energy"));
+
+                    ingredients.add(Ingredient.builder()
+                            .name(name.trim())
+                            .calories(calories)
+                            .build());
+                }
+
+                url = ingredients.size() < MAX_INGREDIENTS ? (String) response.get("next") : null;
+                log.info("  → {} ingredients parsed...", ingredients.size());
             }
+
+            ingredientRepository.saveAll(ingredients);
+            log.info("Persisted {} ingredients.", ingredients.size());
+            return ingredients.size();
+
         } catch (Exception e) {
-            log.error("Failed to seed ingredients: {}", e.getMessage());
+            log.error("Failed to seed ingredients: {}", e.getMessage(), e);
+            return 0;
         }
+    }
+
+    private static Double extractDouble(Object value) {
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        }
+        if (value instanceof String) {
+            try {
+                return Double.parseDouble((String) value);
+            } catch (NumberFormatException ignored) {
+                /* fall through */
+            }
+        }
+        return 0.0;
     }
 }

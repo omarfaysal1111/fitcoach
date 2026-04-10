@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "trainee_workout_completions",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"trainee_id", "workout_id", "completion_date"}))
+       uniqueConstraints = @UniqueConstraint(columnNames = {"trainee_id", "plan_session_id", "completion_date"}))
 @Getter
 @Setter
 @NoArgsConstructor
@@ -25,8 +25,8 @@ public class TraineeWorkoutCompletion {
     private Trainee trainee;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "workout_id")
-    private Workout workout;
+    @JoinColumn(name = "plan_session_id")
+    private PlanSession planSession;
 
     @Column(name = "completion_date", nullable = false)
     private LocalDate completionDate;
@@ -34,4 +34,3 @@ public class TraineeWorkoutCompletion {
     @Column(nullable = false)
     private LocalDateTime completedAt;
 }
-

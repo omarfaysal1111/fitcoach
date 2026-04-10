@@ -7,9 +7,9 @@ import lombok.Data;
 @Builder
 public class TraineePlanSummaryResponse {
 
-    private Long id;
+    /** String so both numeric nutrition plan ids and UUID workout plan ids serialize cleanly. */
+    private String id;
     private String title;
     private String description;
     private String type; // "EXERCISE" or "NUTRITION"
 }
-

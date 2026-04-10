@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -53,7 +54,7 @@ public class TraineeDashboardTodayResponse {
     @Data
     @Builder
     public static class TodayWorkoutSummary {
-        private Long planId;
+        private UUID planId;
         private String title;
         private String difficulty;
         private int exercisesTotal;
@@ -75,6 +76,16 @@ public class TraineeDashboardTodayResponse {
         private int carbsTarget;
         private int fatGrams;
         private int fatTarget;
+        private List<DashboardMeal> meals;
+    }
+
+    @Data
+    @Builder
+    public static class DashboardMeal {
+        private Long id;
+        private String name;
+        private int calories;
+        private boolean completed;
     }
 
     @Data

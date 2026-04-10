@@ -3,6 +3,10 @@ package com.fitcoach.domain.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Master exercise dictionary (e.g. seeded from wger {@code /exerciseinfo/}). Plan prescriptions
+ * reference this via {@link PlanSessionExercise}.
+ */
 @Entity
 @Table(name = "exercises")
 @Getter

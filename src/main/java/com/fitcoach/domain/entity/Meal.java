@@ -25,6 +25,12 @@ public class Meal {
 
     private Double calories;
 
+    private Double protein;
+
+    private Double carbs;
+
+    private Double fat;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "meal_ingredients",

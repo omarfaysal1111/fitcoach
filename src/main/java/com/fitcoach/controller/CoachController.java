@@ -2,6 +2,8 @@ package com.fitcoach.controller;
 
 import com.fitcoach.dto.request.InvitationRequest;
 import com.fitcoach.dto.request.UpdateCoachRequest;
+import com.fitcoach.dto.response.CoachAlertResponse;
+import com.fitcoach.dto.response.CoachTraineeDetailResponse;
 import com.fitcoach.dto.response.ApiResponse;
 import com.fitcoach.dto.response.CoachHomeResponse;
 import com.fitcoach.dto.response.CoachProfileResponse;
@@ -74,5 +76,19 @@ public class CoachController {
     public ResponseEntity<ApiResponse<List<TraineeProfileResponse>>> getMyTrainees(
             @AuthenticationPrincipal UserDetails principal) {
         return ResponseEntity.ok(ApiResponse.ok(coachService.getMyTrainees(principal.getUsername())));
+    }
+
+    /** GET /api/coaches/trainees/{id} – profile plus workout completion history (per-set completed/skipped/missed). */
+    @GetMapping("/trainees/{id}")
+    public ResponseEntity<ApiResponse<CoachTraineeDetailResponse>> getTraineeDetails(
+            @AuthenticationPrincipal UserDetails principal,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.ok(coachService.getTraineeDetails(principal.getUsername(), id)));
+    }
+
+    @GetMapping("/alerts")
+    public ResponseEntity<ApiResponse<List<CoachAlertResponse>>> getAlerts(
+            @AuthenticationPrincipal UserDetails principal) {
+        return ResponseEntity.ok(ApiResponse.ok(coachService.getAlerts(principal.getUsername())));
     }
 }

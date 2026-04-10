@@ -48,6 +48,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
                 // Coach-scoped endpoints
                 .requestMatchers("/coaches/**").hasRole("COACH")
+                .requestMatchers("/v1/**").hasRole("COACH")
                 // Trainee-scoped endpoints
                 .requestMatchers("/trainees/**").hasRole("TRAINEE")
                 // Everything else requires authentication
