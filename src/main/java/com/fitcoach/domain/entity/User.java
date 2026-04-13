@@ -44,6 +44,12 @@ public class User {
     @Builder.Default
     private boolean enabled = true;
 
+    /**
+     * Epoch seconds of the {@code iat} claim for the latest issued JWT. Tokens with an earlier
+     * {@code iat} are rejected after a new login or registration issues a replacement token.
+     */
+    private Long jwtIssuedEpochSec;
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;

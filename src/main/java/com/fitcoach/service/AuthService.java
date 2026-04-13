@@ -9,7 +9,6 @@ import com.fitcoach.dto.request.RegisterCoachRequest;
 import com.fitcoach.dto.request.RegisterTraineeRequest;
 import com.fitcoach.dto.response.AuthResponse;
 import com.fitcoach.exception.ConflictException;
-import com.fitcoach.exception.InvitationException;
 import com.fitcoach.repository.CoachRepository;
 import com.fitcoach.repository.TraineeRepository;
 import com.fitcoach.repository.UserRepository;
@@ -17,10 +16,11 @@ import com.fitcoach.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -56,7 +56,10 @@ public class AuthService {
                 .build();
         coachRepository.save(coach);
 
-        String token = jwtUtil.generateToken(user.getEmail());
+        long iatSec = Instant.now().getEpochSecond();
+        user.setJwtIssuedEpochSec(iatSec);
+        userRepository.save(user);
+        String token = jwtUtil.generateToken(user.getEmail(), iatSec);
         return buildAuthResponse(token, user);
     }
 
@@ -85,19 +88,25 @@ public class AuthService {
                 .build();
         traineeRepository.save(trainee);
 
-        String token = jwtUtil.generateToken(user.getEmail());
+        long iatSec = Instant.now().getEpochSecond();
+        user.setJwtIssuedEpochSec(iatSec);
+        userRepository.save(user);
+        String token = jwtUtil.generateToken(user.getEmail(), iatSec);
         return buildAuthResponse(token, user);
     }
 
     // ── Login (both roles) ────────────────────────────────────────────────────
     public AuthResponse login(LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
+        authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow();
 
-        String token = jwtUtil.generateToken(authentication);
+        long iatSec = Instant.now().getEpochSecond();
+        user.setJwtIssuedEpochSec(iatSec);
+        userRepository.save(user);
+        String token = jwtUtil.generateToken(user.getEmail(), iatSec);
         return buildAuthResponse(token, user);
     }
 

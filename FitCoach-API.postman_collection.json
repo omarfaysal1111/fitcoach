@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "fitcoach-pro-api-collection",
     "name": "FitCoach Pro API",
-    "description": "Complete API collection for FitCoach Pro — covers Auth, Coach, Trainee, legacy exercise plans, and **v1 workout-plan builder** (`/v1/...`).\n\n**Base URL:** `http://localhost:8080/api` (matches `server.servlet.context-path=/api`).\n\n**How to use:**\n1. Import this collection into Postman.\n2. Run **Register Coach** (or **Login Coach**) to get `{{coachToken}}`.\n3. Open folder **Workout plans (v1 API)** → run **Setup – save coachId** then **Create plan** → **Add workout day** → **Replace workout exercises** → **Assign plan to trainee** in order (IDs auto-save to collection variables).\n4. `{{traineeId}}` defaults to `1` — change after **Get My Trainees** if needed.\n5. Exercise IDs `1` and `2` assume wger seeding created rows; use **Get All Exercises** if not.",
+    "description": "Complete API collection for FitCoach Pro — covers Auth, Coach, Trainee, legacy exercise plans, and **v1 workout-plan builder** (`/v1/...`).\n\n**Base URL:** `http://localhost:8080/api` (matches `server.servlet.context-path=/api`).\n\n**How to use:**\n1. Import this collection into Postman.\n2. Run **Register Coach** (or **Login Coach**) to get `{{coachToken}}`.\n3. Open folder **Workout plans (v1 API)** → run **Setup – save coachId** then **Create plan** → **Add workout day** → **Replace workout exercises** → **Assign plan to trainee** in order (IDs auto-save to collection variables).\n4. `{{traineeId}}` defaults to `1` — change after **Get My Trainees** if needed.\n5. Set `{{mealId}}` from **Get My Nutrition Plans** (meal `id` strings) when logging meals.\n6. Exercise IDs `1` and `2` assume wger seeding created rows; use **Get All Exercises** if not.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -49,6 +49,11 @@
     {
       "key": "workoutLogId",
       "value": "",
+      "type": "string"
+    },
+    {
+      "key": "mealId",
+      "value": "1",
       "type": "string"
     }
   ],
@@ -585,7 +590,7 @@
                 "nutrition-plans"
               ]
             },
-            "description": "Returns the authenticated trainee's assigned nutrition plans."
+            "description": "Returns the trainee's **most recently created** assigned nutrition plan as a detailed payload: `meals[]` with macros and `ingredients[]` (id + name). Older plans are not listed — use coach **Get My Nutrition Plans** for the full coach-side list. Populate `{{mealId}}` from a meal's `id` when calling **Complete Meal**."
           }
         },
         {
@@ -670,10 +675,14 @@
               {
                 "key": "Authorization",
                 "value": "Bearer {{traineeToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/trainees/me/meals/1/complete",
+              "raw": "{{baseUrl}}/trainees/me/meals/{{mealId}}/complete",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -681,11 +690,82 @@
                 "trainees",
                 "me",
                 "meals",
-                "1",
+                "{{mealId}}",
                 "complete"
               ]
             },
-            "description": "Marks meal ID 1 as completed/logged for today for the authenticated trainee. Dashboard uses this to calculate caloriesConsumed."
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skipMeal\": false,\n  \"skippedIngredientIds\": [],\n  \"replacedIngredients\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Logs today's meal for the authenticated trainee. **Body is optional** — omit it or send `{}` for a default full completion.\n\n- `skipMeal: true` — whole meal skipped (response message: \"Meal skipped successfully\").\n- `skippedIngredientIds` — ingredients not eaten.\n- `replacedIngredients` — swaps: `originalIngredientId`, `newIngredientId`, optional `newQuantity`.\n\nSet `{{mealId}}` from **Get My Nutrition Plans** (meal `id`)."
+          }
+        },
+        {
+          "name": "Complete Meal – skip whole meal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{traineeToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trainees/me/meals/{{mealId}}/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["trainees", "me", "meals", "{{mealId}}", "complete"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skipMeal\": true,\n  \"skippedIngredientIds\": [],\n  \"replacedIngredients\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Example: skip the entire meal for today. Uses `{{mealId}}`."
+          }
+        },
+        {
+          "name": "Complete Meal – partial / swaps",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{traineeToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trainees/me/meals/{{mealId}}/complete",
+              "host": ["{{baseUrl}}"],
+              "path": ["trainees", "me", "meals", "{{mealId}}", "complete"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skipMeal\": false,\n  \"skippedIngredientIds\": [1],\n  \"replacedIngredients\": [\n    {\n      \"originalIngredientId\": 2,\n      \"newIngredientId\": 3,\n      \"newQuantity\": 150.0\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Example: skipped one catalog ingredient and swapped another. Replace IDs with values from **Get My Nutrition Plans** / **Get All Ingredients**."
           }
         },
         {

@@ -23,4 +23,6 @@ public class TraineeProfileResponse {
     private int workoutProgressPercent;
     private int nutritionProgressPercent;
     private int adherencePercent;
+    private int missedWorkoutsCount;
+    private int missedMealsCount;
 }

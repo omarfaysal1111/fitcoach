@@ -5,12 +5,12 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.time.Instant;
 import java.util.Date;
+import java.util.Optional;
 
 @Slf4j
 @Component
@@ -28,21 +28,16 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateToken(Authentication authentication) {
-        UserDetails principal = (UserDetails) authentication.getPrincipal();
-        return buildToken(principal.getUsername());
+    public String generateToken(String email, long issuedAtEpochSeconds) {
+        return buildToken(email, issuedAtEpochSeconds);
     }
 
-    public String generateToken(String email) {
-        return buildToken(email);
-    }
-
-    private String buildToken(String subject) {
-        Date now = new Date();
-        Date expiry = new Date(now.getTime() + jwtExpirationMs);
+    private String buildToken(String subject, long issuedAtEpochSeconds) {
+        Date issued = Date.from(Instant.ofEpochSecond(issuedAtEpochSeconds));
+        Date expiry = new Date(issued.getTime() + jwtExpirationMs);
         return Jwts.builder()
                 .subject(subject)
-                .issuedAt(now)
+                .issuedAt(issued)
                 .expiration(expiry)
                 .signWith(getSigningKey())
                 .compact();
@@ -53,12 +48,18 @@ public class JwtUtil {
     }
 
     public boolean validateToken(String token) {
+        return parseValidClaims(token).isPresent();
+    }
+
+    /**
+     * Parses and verifies the token signature and expiry; empty if invalid.
+     */
+    public Optional<Claims> parseValidClaims(String token) {
         try {
-            parseClaims(token);
-            return true;
+            return Optional.of(parseClaims(token));
         } catch (JwtException | IllegalArgumentException ex) {
             log.warn("JWT validation failed: {}", ex.getMessage());
-            return false;
+            return Optional.empty();
         }
     }
 

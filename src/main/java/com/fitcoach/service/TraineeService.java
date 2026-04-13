@@ -9,6 +9,8 @@ import com.fitcoach.domain.entity.Trainee;
 import com.fitcoach.domain.entity.TraineeMealCompletion;
 import com.fitcoach.domain.entity.TraineeWorkoutCompletion;
 import com.fitcoach.domain.entity.WorkoutPlan;
+import com.fitcoach.dto.request.IngredientSwapRequest;
+import com.fitcoach.dto.request.MealCompletionRequest;
 import com.fitcoach.dto.request.UpdateTraineeRequest;
 import com.fitcoach.dto.response.CoachProfileResponse;
 import com.fitcoach.dto.response.TraineeDashboardTodayResponse;
@@ -340,28 +342,62 @@ public class TraineeService {
                                         .build()));
     }
 
-    @Transactional
-    public void completeMeal(String email, Long mealId) {
+@Transactional
+    public void completeMeal(String email, Long mealId, MealCompletionRequest request) {
         Trainee trainee = getTraineeByEmail(email);
         Meal meal = mealRepository.findById(mealId)
                 .orElseThrow(() -> new ResourceNotFoundException("Meal not found"));
 
         var today = java.time.LocalDate.now();
-        traineeMealCompletionRepository
+        
+        // 1. Fetch existing log for today, or create a new one
+        TraineeMealCompletion completion = traineeMealCompletionRepository
                 .findByTraineeIdAndMealIdAndCompletionDate(trainee.getId(), mealId, today)
-                .ifPresentOrElse(
-                        existing -> {},
-                        () -> traineeMealCompletionRepository.save(
-                                TraineeMealCompletion.builder()
-                                        .trainee(trainee)
-                                        .meal(meal)
-                                        .completionDate(today)
-                                        .completedAt(java.time.LocalDateTime.now())
-                                        .build()));
+                .orElseGet(() -> TraineeMealCompletion.builder()
+                        .trainee(trainee)
+                        .meal(meal)
+                        .completionDate(today)
+                        .build());
+
+        // 2. Update completion status
+        completion.setCompletedAt(java.time.LocalDateTime.now());
+        
+        // Set whether the whole meal was skipped
+        boolean isSkipped = request != null && request.isSkipMeal();
+        completion.setSkipped(isSkipped); 
+
+        // Save the main completion record
+        traineeMealCompletionRepository.save(completion);
+
+        // 3. Handle specific ingredient deviations (only if the meal was actually eaten)
+        if (!isSkipped && request != null) {
+            processIngredientDeviations(completion, request);
+        }
+    }
+
+    private void processIngredientDeviations(TraineeMealCompletion completion, MealCompletionRequest request) {
+        // Note: You will need a repository to save these, e.g., mealDeviationRepository
+        
+        // Handle skipped ingredients
+        if (request.getSkippedIngredientIds() != null && !request.getSkippedIngredientIds().isEmpty()) {
+            for (Long ingredientId : request.getSkippedIngredientIds()) {
+                // TODO: Save to database (e.g., MealDeviation entity)
+                // Example: mealDeviationRepository.save(new MealDeviation(completion, ingredientId, null));
+            }
+        }
+
+        // Handle replaced ingredients
+        if (request.getReplacedIngredients() != null && !request.getReplacedIngredients().isEmpty()) {
+            for (IngredientSwapRequest swap : request.getReplacedIngredients()) {
+                // TODO: Save to database
+                // Example: mealDeviationRepository.save(new MealDeviation(completion, swap.getOriginalIngredientId(), swap.getNewIngredientId()));
+            }
+        }
     }
 
     @Transactional
     public TraineeProfileResponse updateMyProfile(String email, UpdateTraineeRequest request) {
+        // ... existing logic remains exactly the same ...
         Trainee trainee = getTraineeByEmail(email);
 
         if (StringUtils.hasText(request.getFullName())) {
@@ -373,9 +409,7 @@ public class TraineeService {
 
         traineeRepository.save(trainee);
         return toResponse(trainee);
-    }
-
-    @Transactional(readOnly = true)
+    }    @Transactional(readOnly = true)
     public CoachProfileResponse getMyCoach(String email) {
         Trainee trainee = getTraineeByEmail(email);
         var coach = trainee.getCoach();

@@ -27,7 +27,9 @@ public class TraineeMealCompletion {
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "meal_id")
     private Meal meal;
-
+@Column(name = "is_skipped")
+    @Builder.Default
+    private boolean isSkipped = false;
     @Column(name = "completion_date", nullable = false)
     private LocalDate completionDate;
 

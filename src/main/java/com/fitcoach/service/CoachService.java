@@ -377,6 +377,7 @@ public class CoachService {
                 .build();
     }
 
+     
     private TraineeProfileResponse toTraineeResponse(Trainee trainee, Coach coach) {
         LocalDate today = LocalDate.now();
         LocalDate joinedAt = trainee.getCreatedAt() == null ? today : trainee.getCreatedAt().toLocalDate();
@@ -464,6 +465,9 @@ public class CoachService {
                 : (int) Math.round((mealsCompletedSinceJoin * 100.0) / expectedMealsSinceJoin);
         int adherencePercent = (workoutProgressPercent + nutritionProgressPercent) / 2;
 
+        int missedWorkoutsCount = Math.max(0, expectedWorkoutsSinceJoin - workoutsCompletedSinceJoin);
+        int missedMealsCount = Math.max(0, expectedMealsSinceJoin - mealsCompletedSinceJoin);
+
         return TraineeProfileResponse.builder()
                 .id(trainee.getId())
                 .userId(trainee.getUser().getId())
@@ -480,6 +484,8 @@ public class CoachService {
                 .workoutProgressPercent(Math.min(100, Math.max(0, workoutProgressPercent)))
                 .nutritionProgressPercent(Math.min(100, Math.max(0, nutritionProgressPercent)))
                 .adherencePercent(Math.min(100, Math.max(0, adherencePercent)))
+                .missedWorkoutsCount(missedWorkoutsCount)
+                .missedMealsCount(missedMealsCount)
                 .build();
     }
 }

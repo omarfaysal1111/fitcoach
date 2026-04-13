@@ -45,8 +45,10 @@
 /Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/request/CreateProgressPictureRequest.java
 /Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/request/ExerciseLogItemRequest.java
 /Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/request/ExerciseSetLogRequest.java
+/Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/request/IngredientSwapRequest.java
 /Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/request/InvitationRequest.java
 /Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/request/LoginRequest.java
+/Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/request/MealCompletionRequest.java
 /Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/request/RegisterCoachRequest.java
 /Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/request/RegisterTraineeRequest.java
 /Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/request/ReviewExerciseLogRequest.java
@@ -65,8 +67,11 @@
 /Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/response/CoachHomeResponse.java
 /Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/response/CoachProfileResponse.java
 /Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/response/CoachTraineeDetailResponse.java
+/Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/response/IngredientResponse.java
 /Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/response/InvitationResponse.java
+/Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/response/MealDetailedResponse.java
 /Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/response/MeasurementLogResponse.java
+/Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/response/NutritionPlanDetailedResponse.java
 /Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/response/ProgressPictureResponse.java
 /Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/response/TraineeDashboardTodayResponse.java
 /Users/omarfaysal/Documents/Guider-files/fitcoach/src/main/java/com/fitcoach/dto/response/TraineeExercisePlanDetailResponse.java
