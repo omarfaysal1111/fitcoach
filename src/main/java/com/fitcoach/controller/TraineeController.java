@@ -19,7 +19,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,6 +43,7 @@ public class TraineeController {
     @GetMapping("/me/dashboard-today")
     public ResponseEntity<ApiResponse<TraineeDashboardTodayResponse>> getMyTodayDashboard(
             @AuthenticationPrincipal UserDetails principal) {
+                
         return ResponseEntity.ok(
                 ApiResponse.ok(traineeService.getTodayDashboard(principal.getUsername())));
     }
@@ -82,29 +83,46 @@ public class TraineeController {
     }
     
     /** GET /api/trainees/me/nutrition-plans – get my assigned nutrition plans (summaries only) */
-    @GetMapping("/me/nutrition-plans")
-    public ResponseEntity<ApiResponse<List<TraineePlanSummaryResponse>>> getMyNutritionPlans(
-            @AuthenticationPrincipal UserDetails principal) {
-        Long traineeId = traineeService.getTraineeByEmail(principal.getUsername()).getId();
-        List<NutritionPlan> plans = nutritionPlanService.getPlansByTrainee(traineeId);
+@GetMapping("/me/nutrition-plans")
+@Transactional(readOnly = true) // Ensures lazy-loaded meals and ingredients can be accessed within the request
+public ResponseEntity<ApiResponse<List<NutritionPlanDetailedResponse>>> getMyNutritionPlans(
+        @AuthenticationPrincipal UserDetails principal) {
+    Long traineeId = traineeService.getTraineeByEmail(principal.getUsername()).getId();
+    List<NutritionPlan> plans = nutritionPlanService.getPlansByTrainee(traineeId);
 
-        // Pick the latest plan by createdAt (if any), null-safe
-        List<TraineePlanSummaryResponse> summaries = plans.stream()
-                .max(java.util.Comparator.comparing(
-                        NutritionPlan::getCreatedAt,
-                        java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
-                .map(p -> List.of(TraineePlanSummaryResponse.builder()
-                        .id(String.valueOf(p.getId()))
-                        .title(p.getTitle())
-                        .description(p.getDescription())
-                        .type("NUTRITION")
-                        .build()))
-                .orElseGet(List::of);
+    // Pick the latest plan by createdAt (if any), null-safe
+    List<NutritionPlanDetailedResponse> detailedPlans = plans.stream()
+            .max(java.util.Comparator.comparing(
+                    NutritionPlan::getCreatedAt,
+                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+            .map(p -> List.of(NutritionPlanDetailedResponse.builder()
+                    .id(String.valueOf(p.getId()))
+                    .title(p.getTitle())
+                    .description(p.getDescription())
+                    .type("NUTRITION")
+                    .meals(p.getMeals().stream()
+                            .map(meal -> MealDetailedResponse.builder()
+                                    .id(String.valueOf(meal.getId()))
+                                    .name(meal.getName())
+                                    .calories(meal.getCalories())
+                                    .protein(meal.getProtein())
+                                    .carbs(meal.getCarbs())
+                                    .fat(meal.getFat())
+                                    .ingredients(meal.getIngredients().stream()
+                                            .map(ingredient -> IngredientResponse.builder()
+                                                    .id(String.valueOf(ingredient.getId()))
+                                                    // Assuming your Ingredient entity has a 'getName()' method
+                                                    .name(ingredient.getName()) 
+                                                    .build())
+                                            .toList())
+                                    .build())
+                            .toList())
+                    .build()))
+            .orElseGet(List::of);
 
-        return ResponseEntity.ok(
-                ApiResponse.ok("Nutrition plans retrieved successfully", summaries));
-    }
-
+    return ResponseEntity.ok(
+            ApiResponse.ok("Nutrition plan retrieved successfully", detailedPlans));
+}
     /** GET /api/trainees/me/exercise-plans – get my assigned exercise plans (summaries only) */
     @GetMapping("/me/exercise-plans")
     public ResponseEntity<ApiResponse<List<TraineePlanSummaryResponse>>> getMyExercisePlans(
