@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -40,6 +41,9 @@ public class CoachController {
     @GetMapping("/home")
     public ResponseEntity<ApiResponse<CoachHomeResponse>> getHome(
             @AuthenticationPrincipal UserDetails principal) {
+        if (principal == null) {
+            throw new AuthenticationCredentialsNotFoundException("Unauthenticated");
+        }
         CoachHomeResponse home = coachService.getHome(principal.getUsername());
         return ResponseEntity.ok(ApiResponse.ok(home));
     }

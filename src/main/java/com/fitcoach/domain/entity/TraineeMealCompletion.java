@@ -27,13 +27,35 @@ public class TraineeMealCompletion {
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "meal_id")
     private Meal meal;
-@Column(name = "is_skipped")
+
+    /**
+     * Nullable in some existing DB rows. We treat NULL as false.
+     * Keep the column name as-is for backwards compatibility.
+     */
+    @Column(name = "is_skipped")
     @Builder.Default
-    private boolean isSkipped = false;
+    private Boolean skipped = false;
+
     @Column(name = "completion_date", nullable = false)
     private LocalDate completionDate;
 
     @Column(nullable = false)
     private LocalDateTime completedAt;
+
+    @PrePersist
+    @PreUpdate
+    void coalesceNulls() {
+        if (skipped == null) {
+            skipped = false;
+        }
+    }
+
+    public boolean isSkipped() {
+        return Boolean.TRUE.equals(skipped);
+    }
+
+    public void setSkipped(boolean skipped) {
+        this.skipped = skipped;
+    }
 }
 

@@ -385,6 +385,7 @@ public class CoachService {
         List<PlanAssignment> assignments = planAssignmentRepository.findByTrainee_Id(trainee.getId());
 
         java.util.Set<UUID> assignedPlanSessionIds = assignments.stream()
+                .filter(a -> a.getPlan() != null && a.getPlan().getSessions() != null)
                 .flatMap(a -> a.getPlan().getSessions().stream())
                 .map(s -> s.getId())
                 .filter(java.util.Objects::nonNull)
@@ -401,6 +402,7 @@ public class CoachService {
         int workoutsCompletedToday = (int) traineeWorkoutCompletionRepository
                 .findByTrainee_IdAndCompletionDate(trainee.getId(), today)
                 .stream()
+                .filter(c -> c.getPlanSession() != null && c.getPlanSession().getId() != null)
                 .map(c -> c.getPlanSession().getId())
                 .filter(assignedPlanSessionIds::contains)
                 .distinct()
@@ -420,6 +422,7 @@ public class CoachService {
         int mealsCompletedToday = (int) traineeMealCompletionRepository
                 .findByTraineeIdAndCompletionDate(trainee.getId(), today)
                 .stream()
+                .filter(c -> c.getMeal() != null && c.getMeal().getId() != null)
                 .map(c -> c.getMeal().getId())
                 .filter(assignedMealIds::contains)
                 .distinct()
