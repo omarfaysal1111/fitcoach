@@ -22,5 +22,7 @@ public interface TraineeMealCompletionRepository extends JpaRepository<TraineeMe
 
     List<TraineeMealCompletion> findByTraineeIdAndCompletionDateBetween(
             Long traineeId, LocalDate startDate, LocalDate endDate);
+
+    List<TraineeMealCompletion> findByTraineeIdOrderByCompletionDateDescCompletedAtDesc(Long traineeId);
 }
 

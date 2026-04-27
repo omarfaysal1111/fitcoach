@@ -1,12 +1,22 @@
 package com.fitcoach.service;
 
+import com.fitcoach.domain.entity.MealIngredientDeviation;
+import com.fitcoach.domain.entity.TraineeMealCompletion;
+import com.fitcoach.dto.response.MealCompletionLogResponse;
+import com.fitcoach.repository.MealIngredientDeviationRepository;
 import com.fitcoach.domain.entity.Coach;
 import com.fitcoach.domain.entity.NutritionPlan;
 import com.fitcoach.domain.entity.PlanAssignment;
 import com.fitcoach.domain.entity.PlanSession;
 import com.fitcoach.domain.entity.PlanStatus;
 import com.fitcoach.domain.entity.Trainee;
+import com.fitcoach.domain.enums.TraineeStatus;
 import com.fitcoach.dto.request.UpdateCoachRequest;
+import com.fitcoach.dto.request.UpdateTraineeByCoachRequest;
+import com.fitcoach.dto.request.UpdateTraineeNotesRequest;
+import com.fitcoach.dto.response.CoachGoalResponse;
+import com.fitcoach.dto.response.InBodyReportResponse;
+import com.fitcoach.dto.response.ProgressPhotoResponse;
 import com.fitcoach.dto.response.CoachAlertResponse;
 import com.fitcoach.dto.response.CoachTraineeDetailResponse;
 import com.fitcoach.dto.response.CoachHomeResponse;
@@ -50,8 +60,13 @@ public class CoachService {
     private final NutritionPlanRepository nutritionPlanRepository;
     private final TraineeWorkoutCompletionRepository traineeWorkoutCompletionRepository;
     private final TraineeMealCompletionRepository traineeMealCompletionRepository;
+    private final MealIngredientDeviationRepository mealIngredientDeviationRepository;
     private final ExerciseLogService exerciseLogService;
     private final MeasurementService measurementService;
+    private final CoachGoalService coachGoalService;
+    private final InBodyReportService inBodyReportService;
+    private final ProgressPhotoService progressPhotoService;
+    private final TraineeService traineeService;
 
     @Transactional(readOnly = true)
     public CoachProfileResponse getMyProfile(String email) {
@@ -98,6 +113,44 @@ public class CoachService {
 
         coachRepository.save(coach);
         return toResponse(coach);
+    }
+
+    @Transactional
+    public TraineeProfileResponse updateTraineeNotes(String coachEmail, Long traineeId,
+            UpdateTraineeNotesRequest request) {
+        Coach coach = findCoachByEmail(coachEmail);
+        Trainee trainee = traineeRepository.findById(traineeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Trainee not found"));
+        if (!trainee.getCoach().getId().equals(coach.getId())) {
+            throw new IllegalArgumentException("Not authorized to update this trainee");
+        }
+        if (request.getCoachFeedback() != null) {
+            trainee.setCoachFeedback(request.getCoachFeedback());
+        }
+        if (request.getCautionNotes() != null) {
+            trainee.setCautionNotes(request.getCautionNotes());
+        }
+        traineeRepository.save(trainee);
+        return toTraineeResponse(trainee, coach);
+    }
+
+    @Transactional
+    public TraineeProfileResponse updateTraineeByCoach(String coachEmail, Long traineeId,
+            UpdateTraineeByCoachRequest request) {
+        Coach coach = findCoachByEmail(coachEmail);
+        Trainee trainee = traineeRepository.findById(traineeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Trainee not found"));
+        if (!trainee.getCoach().getId().equals(coach.getId())) {
+            throw new IllegalArgumentException("Not authorized to update this trainee");
+        }
+        if (StringUtils.hasText(request.getFitnessGoal())) {
+            trainee.setFitnessGoal(request.getFitnessGoal());
+        }
+        if (StringUtils.hasText(request.getTraineeLevel())) {
+            trainee.setTraineeLevel(request.getTraineeLevel());
+        }
+        traineeRepository.save(trainee);
+        return toTraineeResponse(trainee, coach);
     }
 
     @Transactional(readOnly = true)
@@ -351,12 +404,82 @@ public class CoachService {
                                 .collect(Collectors.toList()))
                 .workoutCompletionHistory(
                         exerciseLogService.getWorkoutCompletionHistoryForTrainee(email, traineeId))
+                .mealCompletionHistory(
+                        getMealCompletionHistoryForTrainee(email, traineeId))
                 .missedWorkoutsCount(missedWorkoutsCount)
                 .missedMealsCount(missedMealsCount)
+                .goals(coachGoalService.getGoalsForTrainee(traineeId))
+                .inbodyReports(inBodyReportService.getReportsForTrainee(traineeId))
+                .progressPhotos(progressPhotoService.getPhotosForTrainee(traineeId))
                 .build();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Full meal-completion history for a trainee, newest first. Each entry carries the meal name,
+     * its parent nutrition plan, whether it was skipped, and all ingredient-level deviations
+     * (skipped or swapped ingredients) so the coach can see exactly what the trainee ate.
+     */
+    @Transactional(readOnly = true)
+    public List<MealCompletionLogResponse> getMealCompletionHistoryForTrainee(String coachEmail, Long traineeId) {
+        Coach coach = findCoachByEmail(coachEmail);
+        Trainee trainee = traineeRepository.findById(traineeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Trainee not found"));
+        if (!trainee.getCoach().getId().equals(coach.getId())) {
+            throw new IllegalArgumentException("Not authorized to view this trainee");
+        }
+
+        List<TraineeMealCompletion> completions =
+                traineeMealCompletionRepository
+                        .findByTraineeIdOrderByCompletionDateDescCompletedAtDesc(traineeId);
+
+        List<Long> completionIds = completions.stream()
+                .map(TraineeMealCompletion::getId)
+                .collect(Collectors.toList());
+
+        Map<Long, List<MealIngredientDeviation>> deviationsByCompletionId = completionIds.isEmpty()
+                ? Map.of()
+                : mealIngredientDeviationRepository.findByCompletionIdIn(completionIds)
+                        .stream()
+                        .collect(Collectors.groupingBy(d -> d.getCompletion().getId()));
+
+        List<MealCompletionLogResponse> result = new ArrayList<>();
+        for (TraineeMealCompletion c : completions) {
+            List<MealIngredientDeviation> deviations =
+                    deviationsByCompletionId.getOrDefault(c.getId(), List.of());
+
+            List<MealCompletionLogResponse.IngredientDeviationItem> items = deviations.stream()
+                    .map(d -> {
+                        boolean isSwap = d.getReplacementIngredient() != null;
+                        return MealCompletionLogResponse.IngredientDeviationItem.builder()
+                                .originalIngredientId(d.getOriginalIngredient().getId())
+                                .originalIngredientName(d.getOriginalIngredient().getName())
+                                .replacementIngredientId(isSwap ? d.getReplacementIngredient().getId() : null)
+                                .replacementIngredientName(isSwap ? d.getReplacementIngredient().getName() : null)
+                                .newQuantity(d.getNewQuantity())
+                                .type(isSwap ? "SWAPPED" : "SKIPPED")
+                                .build();
+                    })
+                    .collect(Collectors.toList());
+
+            NutritionPlan plan = c.getMeal().getNutritionPlan();
+            result.add(MealCompletionLogResponse.builder()
+                    .completionId(c.getId())
+                    .mealId(c.getMeal().getId())
+                    .mealName(c.getMeal().getName())
+                    .nutritionPlanId(plan != null ? plan.getId() : null)
+                    .nutritionPlanTitle(plan != null ? plan.getTitle() : null)
+                    .completionDate(c.getCompletionDate().toString())
+                    .completedAt(c.getCompletedAt())
+                    .skipped(c.isSkipped())
+                    .hasDeviations(!items.isEmpty())
+                    .ingredientDeviations(items)
+                    .build());
+        }
+        return result;
+    }
+
     private Coach findCoachByEmail(String email) {
         var user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -477,6 +600,7 @@ public class CoachService {
                 .fullName(trainee.getUser().getFullName())
                 .email(trainee.getUser().getEmail())
                 .fitnessGoal(trainee.getFitnessGoal())
+                .traineeLevel(trainee.getTraineeLevel())
                 .coachId(coach.getId())
                 .coachName(coach.getUser().getFullName())
                 .createdAt(trainee.getCreatedAt())
@@ -489,6 +613,34 @@ public class CoachService {
                 .adherencePercent(Math.min(100, Math.max(0, adherencePercent)))
                 .missedWorkoutsCount(missedWorkoutsCount)
                 .missedMealsCount(missedMealsCount)
+                .coachFeedback(trainee.getCoachFeedback())
+                .cautionNotes(trainee.getCautionNotes())
+                .currentStreak(traineeService.computeStreak(trainee.getId()))
                 .build();
+    }
+
+    @Transactional
+    public TraineeProfileResponse archiveTrainee(String coachEmail, Long traineeId) {
+        Coach coach = findCoachByEmail(coachEmail);
+        Trainee trainee = traineeRepository.findById(traineeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Trainee not found"));
+        if (!trainee.getCoach().getId().equals(coach.getId())) {
+            throw new IllegalArgumentException("Not authorized to archive this trainee");
+        }
+        trainee.setStatus(TraineeStatus.ARCHIVED);
+        traineeRepository.save(trainee);
+        return toTraineeResponse(trainee, coach);
+    }
+
+    @Transactional
+    public void deleteTrainee(String coachEmail, Long traineeId) {
+        Coach coach = findCoachByEmail(coachEmail);
+        Trainee trainee = traineeRepository.findById(traineeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Trainee not found"));
+        if (!trainee.getCoach().getId().equals(coach.getId())) {
+            throw new IllegalArgumentException("Not authorized to delete this trainee");
+        }
+        trainee.setStatus(TraineeStatus.DELETED);
+        traineeRepository.save(trainee);
     }
 }

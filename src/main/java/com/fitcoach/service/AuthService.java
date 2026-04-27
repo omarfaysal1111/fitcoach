@@ -30,6 +30,7 @@ public class AuthService {
     private final CoachRepository coachRepository;
     private final TraineeRepository traineeRepository;
     private final InvitationService invitationService;
+    private final SubscriptionService subscriptionService;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
@@ -55,6 +56,9 @@ public class AuthService {
                 .specialisation(request.getSpecialisation())
                 .build();
         coachRepository.save(coach);
+
+        // Provision a 7-day trial subscription for the new coach
+        subscriptionService.initTrial(coach);
 
         long iatSec = Instant.now().getEpochSecond();
         user.setJwtIssuedEpochSec(iatSec);

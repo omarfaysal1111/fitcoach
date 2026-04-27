@@ -33,4 +33,12 @@ public class TraineeExerciseSetLog {
     /** Required for {@link SetLogOutcome#SKIPPED} and {@link SetLogOutcome#MISSED}; optional for COMPLETED. */
     @Column(length = 500)
     private String reason;
+
+    /** Weight lifted in kilograms for this set. Null means bodyweight or not recorded. */
+    @Column(name = "weight_kg")
+    private Double weightKg;
+
+    /** Actual reps performed for this set. Null when not recorded. */
+    @Column(name = "reps")
+    private Integer reps;
 }

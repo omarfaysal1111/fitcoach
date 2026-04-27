@@ -2,6 +2,8 @@ package com.fitcoach.controller;
 
 import com.fitcoach.dto.request.InvitationRequest;
 import com.fitcoach.dto.request.UpdateCoachRequest;
+import com.fitcoach.dto.request.UpdateTraineeByCoachRequest;
+import com.fitcoach.dto.request.UpdateTraineeNotesRequest;
 import com.fitcoach.dto.response.CoachAlertResponse;
 import com.fitcoach.dto.response.CoachTraineeDetailResponse;
 import com.fitcoach.dto.response.ApiResponse;
@@ -34,6 +36,9 @@ public class CoachController {
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<CoachProfileResponse>> getMyProfile(
             @AuthenticationPrincipal UserDetails principal) {
+        if (principal == null) {
+            throw new AuthenticationCredentialsNotFoundException("Unauthenticated");
+        }
         return ResponseEntity.ok(ApiResponse.ok(coachService.getMyProfile(principal.getUsername())));
     }
 
@@ -90,9 +95,52 @@ public class CoachController {
         return ResponseEntity.ok(ApiResponse.ok(coachService.getTraineeDetails(principal.getUsername(), id)));
     }
 
+    /** PATCH /api/coaches/trainees/{id} – coach updates a trainee's goal and/or level */
+    @PatchMapping("/trainees/{id}")
+    public ResponseEntity<ApiResponse<TraineeProfileResponse>> updateTraineeProfile(
+            @AuthenticationPrincipal UserDetails principal,
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateTraineeByCoachRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok("Trainee updated",
+                coachService.updateTraineeByCoach(principal.getUsername(), id, request)));
+    }
+
+    /** PUT /api/coaches/trainees/{id}/notes – save coach feedback and caution notes for a trainee */
+    @PutMapping("/trainees/{id}/notes")
+    public ResponseEntity<ApiResponse<TraineeProfileResponse>> updateTraineeNotes(
+            @AuthenticationPrincipal UserDetails principal,
+            @PathVariable Long id,
+            @RequestBody UpdateTraineeNotesRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok("Notes saved",
+                coachService.updateTraineeNotes(principal.getUsername(), id, request)));
+    }
+
     @GetMapping("/alerts")
     public ResponseEntity<ApiResponse<List<CoachAlertResponse>>> getAlerts(
             @AuthenticationPrincipal UserDetails principal) {
         return ResponseEntity.ok(ApiResponse.ok(coachService.getAlerts(principal.getUsername())));
+    }
+
+    /** PATCH /api/coaches/trainees/{id}/status – archive a trainee (body: { "status": "ARCHIVED" }) */
+    @PatchMapping("/trainees/{id}/status")
+    public ResponseEntity<ApiResponse<TraineeProfileResponse>> updateTraineeStatus(
+            @AuthenticationPrincipal UserDetails principal,
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, String> body) {
+        String status = body.getOrDefault("status", "");
+        if ("ARCHIVED".equalsIgnoreCase(status)) {
+            return ResponseEntity.ok(ApiResponse.ok("Trainee archived",
+                    coachService.archiveTrainee(principal.getUsername(), id)));
+        }
+        throw new IllegalArgumentException("Unsupported status: " + status);
+    }
+
+    /** DELETE /api/coaches/trainees/{id} – soft-delete a trainee */
+    @DeleteMapping("/trainees/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteTrainee(
+            @AuthenticationPrincipal UserDetails principal,
+            @PathVariable Long id) {
+        coachService.deleteTrainee(principal.getUsername(), id);
+        return ResponseEntity.ok(ApiResponse.ok("Trainee deleted", null));
     }
 }

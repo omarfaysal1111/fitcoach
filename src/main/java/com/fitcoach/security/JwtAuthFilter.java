@@ -39,7 +39,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (claimsOpt.isPresent()) {
                 Claims claims = claimsOpt.get();
                 if (claims.getIssuedAt() != null && isSuperseded(claims)) {
-                    response.sendError(HttpServletResponse.SC_FORBIDDEN, "Token has been replaced by a newer login");
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    response.getWriter().write("""
+                            {"success":false,"message":"Token has been replaced by a newer login"}
+                            """);
                     return;
                 }
                 String email = claims.getSubject();

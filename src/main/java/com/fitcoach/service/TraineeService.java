@@ -1,6 +1,8 @@
 package com.fitcoach.service;
 
 import com.fitcoach.domain.entity.Coach;
+import com.fitcoach.domain.entity.ExtraMealLog;
+import com.fitcoach.domain.entity.Ingredient;
 import com.fitcoach.domain.entity.Meal;
 import com.fitcoach.domain.entity.NutritionPlan;
 import com.fitcoach.domain.entity.PlanSession;
@@ -9,21 +11,31 @@ import com.fitcoach.domain.entity.Trainee;
 import com.fitcoach.domain.entity.TraineeMealCompletion;
 import com.fitcoach.domain.entity.TraineeWorkoutCompletion;
 import com.fitcoach.domain.entity.WorkoutPlan;
+import com.fitcoach.domain.entity.CoachGoal;
+import com.fitcoach.domain.enums.GoalStatus;
+import com.fitcoach.dto.request.ExtraMealRequest;
 import com.fitcoach.dto.request.IngredientSwapRequest;
 import com.fitcoach.dto.request.MealCompletionRequest;
 import com.fitcoach.dto.request.UpdateTraineeRequest;
+import com.fitcoach.dto.response.ExtraMealLogResponse;
 import com.fitcoach.dto.response.CoachProfileResponse;
 import com.fitcoach.dto.response.TraineeDashboardTodayResponse;
 import com.fitcoach.dto.response.TraineeExercisePlanDetailResponse;
 import com.fitcoach.dto.response.TraineeProfileResponse;
 import com.fitcoach.dto.response.TraineeWorkoutPlanSessionsResponse;
 import com.fitcoach.exception.ResourceNotFoundException;
+import com.fitcoach.domain.entity.MealIngredientDeviation;
+import com.fitcoach.repository.CoachGoalRepository;
+import com.fitcoach.repository.ExtraMealLogRepository;
+import com.fitcoach.repository.IngredientRepository;
+import com.fitcoach.repository.MealIngredientDeviationRepository;
 import com.fitcoach.repository.MealRepository;
 import com.fitcoach.repository.NutritionPlanRepository;
 import com.fitcoach.repository.PlanAssignmentRepository;
 import com.fitcoach.repository.PlanSessionRepository;
 import com.fitcoach.repository.TraineeMealCompletionRepository;
 import com.fitcoach.repository.TraineeRepository;
+import com.fitcoach.repository.TraineeWaterIntakeRepository;
 import com.fitcoach.repository.TraineeWorkoutCompletionRepository;
 import com.fitcoach.repository.UserRepository;
 import com.fitcoach.repository.WorkoutPlanRepository;
@@ -48,6 +60,17 @@ public class TraineeService {
     private final TraineeWorkoutCompletionRepository traineeWorkoutCompletionRepository;
     private final TraineeMealCompletionRepository traineeMealCompletionRepository;
     private final MealRepository mealRepository;
+    private final ExtraMealLogRepository extraMealLogRepository;
+    private final IngredientRepository ingredientRepository;
+    private final MealIngredientDeviationRepository mealIngredientDeviationRepository;
+    private final CoachGoalRepository coachGoalRepository;
+    private final TraineeWaterIntakeRepository traineeWaterIntakeRepository;
+
+    private static final int[] STREAK_BADGE_THRESHOLDS = {7, 14, 30, 60, 100, 180, 365};
+    private static final String[] STREAK_BADGE_NAMES = {
+        "Week Warrior", "Fortnight Fighter", "Monthly Master",
+        "2-Month Champion", "Century Club", "Half-Year Hero", "Year Legend"
+    };
 
     @Transactional(readOnly = true)
     public TraineeProfileResponse getMyProfile(String email) {
@@ -72,13 +95,23 @@ public class TraineeService {
                 .fullName(coach.getUser().getFullName())
                 .build();
 
+        int currentStreak = computeStreak(trainee.getId());
+        int[] nextBadge = nextStreakBadge(currentStreak);
         var streak = TraineeDashboardTodayResponse.Streak.builder()
-                .currentDays(0)
-                .nextBadgeInDays(0)
-                .nextBadgeName(null)
+                .currentDays(currentStreak)
+                .nextBadgeInDays(nextBadge[0])
+                .nextBadgeName(STREAK_BADGE_NAMES[nextBadge[1]])
                 .build();
 
-        var coachGoals = java.util.List.<TraineeDashboardTodayResponse.CoachGoal>of();
+        var coachGoals = coachGoalRepository
+                .findByTraineeIdOrderByCreatedAtDesc(trainee.getId())
+                .stream()
+                .map(g -> TraineeDashboardTodayResponse.CoachGoal.builder()
+                        .id(g.getId())
+                        .label(g.getTitle())
+                        .completed(g.getStatus() == GoalStatus.COMPLETED)
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
 
         java.util.List<WorkoutPlan> workoutPlans = exercisePlanService.getPlansByTrainee(trainee.getId());
         WorkoutPlan todayWorkoutPlan = workoutPlans.stream()
@@ -181,12 +214,17 @@ public class TraineeService {
                     .build();
         }
 
+        double todayWaterLiters = traineeWaterIntakeRepository
+                .findByTraineeIdAndIntakeDate(trainee.getId(), today)
+                .map(w -> w.getLiters() != null ? w.getLiters() : 0.0)
+                .orElse(0.0);
+
         var weeklyGoals = TraineeDashboardTodayResponse.WeeklyGoals.builder()
                 .workoutsCompleted(0)
                 .workoutsTarget(0)
                 .mealsLogged(0)
                 .mealsTarget(0)
-                .waterLiters(0.0)
+                .waterLiters(todayWaterLiters)
                 .waterTargetLiters(0.0)
                 .weightStart(0.0)
                 .weightCurrent(0.0)
@@ -376,21 +414,33 @@ public class TraineeService {
     }
 
     private void processIngredientDeviations(TraineeMealCompletion completion, MealCompletionRequest request) {
-        // Note: You will need a repository to save these, e.g., mealDeviationRepository
-        
-        // Handle skipped ingredients
+        // Handle skipped ingredients – replacementIngredient stays null
         if (request.getSkippedIngredientIds() != null && !request.getSkippedIngredientIds().isEmpty()) {
             for (Long ingredientId : request.getSkippedIngredientIds()) {
-                // TODO: Save to database (e.g., MealDeviation entity)
-                // Example: mealDeviationRepository.save(new MealDeviation(completion, ingredientId, null));
+                Ingredient original = ingredientRepository.findById(ingredientId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + ingredientId));
+                mealIngredientDeviationRepository.save(MealIngredientDeviation.builder()
+                        .completion(completion)
+                        .originalIngredient(original)
+                        .replacementIngredient(null)
+                        .newQuantity(null)
+                        .build());
             }
         }
 
-        // Handle replaced ingredients
+        // Handle replaced ingredients – both original and replacement are stored
         if (request.getReplacedIngredients() != null && !request.getReplacedIngredients().isEmpty()) {
             for (IngredientSwapRequest swap : request.getReplacedIngredients()) {
-                // TODO: Save to database
-                // Example: mealDeviationRepository.save(new MealDeviation(completion, swap.getOriginalIngredientId(), swap.getNewIngredientId()));
+                Ingredient original = ingredientRepository.findById(swap.getOriginalIngredientId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + swap.getOriginalIngredientId()));
+                Ingredient replacement = ingredientRepository.findById(swap.getNewIngredientId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Ingredient not found: " + swap.getNewIngredientId()));
+                mealIngredientDeviationRepository.save(MealIngredientDeviation.builder()
+                        .completion(completion)
+                        .originalIngredient(original)
+                        .replacementIngredient(replacement)
+                        .newQuantity(swap.getNewQuantity())
+                        .build());
             }
         }
     }
@@ -425,7 +475,78 @@ public class TraineeService {
                 .build();
     }
 
+    @Transactional
+    public ExtraMealLogResponse logExtraMeal(String email, ExtraMealRequest request) {
+        Trainee trainee = getTraineeByEmail(email);
+
+        if (request.getIngredientId() == null && (request.getName() == null || request.getName().isBlank())) {
+            throw new IllegalArgumentException("Either ingredientId or a free-text name is required");
+        }
+
+        Ingredient ingredient = null;
+        String name;
+        if (request.getIngredientId() != null) {
+            ingredient = ingredientRepository.findById(request.getIngredientId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Ingredient not found: " + request.getIngredientId()));
+            name = ingredient.getName();
+        } else {
+            name = request.getName().trim();
+        }
+
+        ExtraMealLog log = ExtraMealLog.builder()
+                .trainee(trainee)
+                .name(name)
+                .ingredient(ingredient)
+                .calories(request.getCalories())
+                .mealDate(request.getDate() != null ? request.getDate() : java.time.LocalDate.now())
+                .build();
+
+        return toExtraMealResponse(extraMealLogRepository.save(log));
+    }
+
+    private ExtraMealLogResponse toExtraMealResponse(ExtraMealLog log) {
+        return ExtraMealLogResponse.builder()
+                .id(log.getId())
+                .traineeId(log.getTrainee().getId())
+                .ingredientId(log.getIngredient() != null ? log.getIngredient().getId() : null)
+                .name(log.getName())
+                .calories(log.getCalories())
+                .mealDate(log.getMealDate())
+                .loggedAt(log.getLoggedAt())
+                .build();
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /** Count consecutive days ending today where the trainee completed at least one workout. */
+    public int computeStreak(Long traineeId) {
+        java.util.Set<java.time.LocalDate> completionDates =
+                traineeWorkoutCompletionRepository
+                        .findByTrainee_IdOrderByCompletionDateDescCompletedAtDesc(traineeId)
+                        .stream()
+                        .map(TraineeWorkoutCompletion::getCompletionDate)
+                        .collect(java.util.stream.Collectors.toSet());
+
+        int streak = 0;
+        java.time.LocalDate date = java.time.LocalDate.now();
+        while (completionDates.contains(date)) {
+            streak++;
+            date = date.minusDays(1);
+        }
+        return streak;
+    }
+
+    /** Returns [daysToNextBadge, badgeNameIndex]. */
+    private int[] nextStreakBadge(int currentStreak) {
+        for (int i = 0; i < STREAK_BADGE_THRESHOLDS.length; i++) {
+            if (currentStreak < STREAK_BADGE_THRESHOLDS[i]) {
+                return new int[]{STREAK_BADGE_THRESHOLDS[i] - currentStreak, i};
+            }
+        }
+        return new int[]{0, STREAK_BADGE_NAMES.length - 1};
+    }
+
     public Trainee getTraineeByEmail(String email) {
         var user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));

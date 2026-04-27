@@ -1,6 +1,8 @@
 package com.fitcoach.exception;
 
 import com.fitcoach.dto.response.ApiResponse;
+import com.fitcoach.exception.SubscriptionException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +36,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(InvitationException.class)
     public ResponseEntity<ApiResponse<Void>> handleInvitation(InvitationException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    @ExceptionHandler(SubscriptionException.class)
+    public ResponseEntity<ApiResponse<Void>> handleSubscription(SubscriptionException ex) {
+        return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED)
                 .body(ApiResponse.error(ex.getMessage()));
     }
 
@@ -77,6 +85,14 @@ public class GlobalExceptionHandler {
         String detail = root != null && root.getMessage() != null ? root.getMessage() : ex.getMessage();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error("Data constraint violation: " + detail));
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataAccess(DataAccessException ex) {
+        Throwable root = ex.getMostSpecificCause();
+        String detail = root != null && root.getMessage() != null ? root.getMessage() : ex.getMessage();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("Database error: " + detail));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

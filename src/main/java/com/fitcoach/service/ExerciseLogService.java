@@ -41,6 +41,10 @@ public class ExerciseLogService {
      */
     @Transactional
     public void completeWorkoutWithLogs(String email, UUID planSessionId, CompleteWorkoutRequest request) {
+        if (request == null || request.getExerciseLogs() == null || request.getExerciseLogs().isEmpty()) {
+            throw new IllegalArgumentException("exerciseLogs is required and must not be empty");
+        }
+
         Trainee trainee = getTraineeByEmail(email);
         PlanSession session = planSessionRepository.findById(planSessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Plan session not found"));
@@ -51,6 +55,9 @@ public class ExerciseLogService {
 
         Set<UUID> seenExerciseIds = new HashSet<>();
         for (ExerciseLogItemRequest item : request.getExerciseLogs()) {
+            if (item == null) {
+                throw new IllegalArgumentException("exerciseLogs contains a null item");
+            }
             if (!seenExerciseIds.add(item.getPlanSessionExerciseId())) {
                 throw new IllegalArgumentException(
                         "Duplicate planSessionExerciseId in request: " + item.getPlanSessionExerciseId());
@@ -174,6 +181,8 @@ public class ExerciseLogService {
                     .setNumber(i + 1)
                     .outcome(req.getOutcome())
                     .reason(reason)
+                    .weightKg(req.getWeightKg())
+                    .reps(req.getReps())
                     .build();
             exerciseLog.getSetLogs().add(row);
         }
@@ -322,6 +331,8 @@ public class ExerciseLogService {
                         .setNumber(sl.getSetNumber())
                         .outcome(sl.getOutcome())
                         .reason(sl.getReason())
+                        .weightKg(sl.getWeightKg())
+                        .reps(sl.getReps())
                         .build())
                 .collect(Collectors.toList());
 

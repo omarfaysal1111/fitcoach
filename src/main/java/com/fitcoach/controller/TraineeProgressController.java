@@ -6,12 +6,12 @@ import com.fitcoach.dto.request.CreateProgressPictureRequest;
 import com.fitcoach.dto.response.ApiResponse;
 import com.fitcoach.dto.response.MeasurementLogResponse;
 import com.fitcoach.dto.response.ProgressPictureResponse;
-import com.fitcoach.dto.response.WorkoutLogResponse;
 import com.fitcoach.service.ExerciseLogService;
 import com.fitcoach.service.MeasurementService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -73,7 +73,7 @@ public class TraineeProgressController {
      * POST /api/trainees/me/progress-pictures
      * Upload progress picture URLs.
      */
-    @PostMapping("/me/progress-pictures")
+    @PostMapping(value = "/me/progress-pictures", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<ProgressPictureResponse>> addProgressPicture(
             @AuthenticationPrincipal UserDetails principal,
             @Valid @RequestBody CreateProgressPictureRequest request) {

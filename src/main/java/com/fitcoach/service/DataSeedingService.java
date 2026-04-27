@@ -22,7 +22,19 @@ public class DataSeedingService implements CommandLineRunner {
 
     private static final String WGER_BASE = "https://wger.de/api/v2";
     private static final int PAGE_SIZE = 100;
-    private static final int MAX_INGREDIENTS = 500;
+
+    // USDA FDC Foundation Foods API
+    private static final String USDA_FDC_API_KEY = "mLBKvhwX2xRVLpcswGHJmAxgvTB14Folwkhw9SSs";
+    private static final String USDA_FDC_BASE =
+            "https://api.nal.usda.gov/fdc/v1/foods/list?dataType=Foundation&pageSize=200&api_key=" + USDA_FDC_API_KEY;
+
+    // Nutrient numbers we care about (USDA standard codes)
+    private static final String NUTRIENT_CALORIES     = "957"; // Energy – Atwater General Factors (kcal)
+    private static final String NUTRIENT_FAT          = "204"; // Total lipid (fat)
+    private static final String NUTRIENT_WATER        = "255"; // Water
+    private static final String NUTRIENT_CARBS        = "205"; // Carbohydrate, by difference
+    private static final String NUTRIENT_PROTEIN      = "203"; // Protein
+    private static final String NUTRIENT_MINERALS     = "207"; // Ash (total minerals)
 
     private final ExerciseRepository exerciseRepository;
     private final IngredientRepository ingredientRepository;
@@ -47,7 +59,7 @@ public class DataSeedingService implements CommandLineRunner {
         }
         if (ingredientRepository.count() == 0) {
             int n = fetchAndPersistIngredients();
-            log.info("Startup: seeded {} ingredients from wger.", n);
+            log.info("Startup: seeded {} ingredients from USDA FDC.", n);
         } else {
             log.info("Ingredients already present — skipping startup seed.");
         }
@@ -98,7 +110,7 @@ public class DataSeedingService implements CommandLineRunner {
         if ((replaceExisting || exercisesBefore == 0) && exercisesSaved == 0) {
             detail = "Exercise seed produced 0 rows — check logs / network / wger.";
         } else if ((replaceExisting || ingredientsBefore == 0) && ingredientsSaved == 0) {
-            detail = "Ingredient seed produced 0 rows — check logs / network / wger.";
+            detail = "Ingredient seed produced 0 rows — check logs / network / USDA FDC.";
         }
 
         return CatalogSeedResponse.builder()
@@ -183,56 +195,82 @@ public class DataSeedingService implements CommandLineRunner {
     }
 
     private int fetchAndPersistIngredients() {
-        log.info("Fetching up to {} English ingredients from wger...", MAX_INGREDIENTS);
+        log.info("Fetching Foundation food ingredients from USDA FDC...");
         try {
             RestTemplate restTemplate = new RestTemplate();
             List<Ingredient> ingredients = new ArrayList<>();
-            String url = WGER_BASE + "/ingredient/?format=json&language=2&limit=" + PAGE_SIZE + "&offset=0";
+            int pageNumber = 1;
 
-            while (url != null && ingredients.size() < MAX_INGREDIENTS) {
+            while (true) {
+                String url = USDA_FDC_BASE + "&pageNumber=" + pageNumber;
+
                 @SuppressWarnings("unchecked")
-                Map<String, Object> response = restTemplate.getForObject(url, Map.class);
-                if (response == null) {
+                List<Map<String, Object>> page = restTemplate.getForObject(url, List.class);
+
+                if (page == null || page.isEmpty()) {
                     break;
                 }
 
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> results =
-                        (List<Map<String, Object>>) response.get("results");
-                if (results == null || results.isEmpty()) {
-                    break;
-                }
-
-                for (Map<String, Object> item : results) {
-                    if (ingredients.size() >= MAX_INGREDIENTS) {
-                        break;
-                    }
-
-                    String name = (String) item.get("name");
+                for (Map<String, Object> item : page) {
+                    String name = (String) item.get("description");
                     if (name == null || name.isBlank()) {
                         continue;
                     }
 
-                    Double calories = extractDouble(item.get("energy"));
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> foodNutrients =
+                            (List<Map<String, Object>>) item.get("foodNutrients");
+
+                    Double calories     = extractNutrient(foodNutrients, NUTRIENT_CALORIES);
+                    Double fat          = extractNutrient(foodNutrients, NUTRIENT_FAT);
+                    Double water        = extractNutrient(foodNutrients, NUTRIENT_WATER);
+                    Double carbs        = extractNutrient(foodNutrients, NUTRIENT_CARBS);
+                    Double protein      = extractNutrient(foodNutrients, NUTRIENT_PROTEIN);
+                    Double minerals     = extractNutrient(foodNutrients, NUTRIENT_MINERALS);
 
                     ingredients.add(Ingredient.builder()
                             .name(name.trim())
+                            .servingQuantityG(100.0)
                             .calories(calories)
+                            .fat(fat)
+                            .water(water)
+                            .carbohydrates(carbs)
+                            .protein(protein)
+                            .totalMinerals(minerals)
                             .build());
                 }
 
-                url = ingredients.size() < MAX_INGREDIENTS ? (String) response.get("next") : null;
-                log.info("  → {} ingredients parsed...", ingredients.size());
+                log.info("  → page {}: {} ingredients total so far", pageNumber, ingredients.size());
+
+                if (page.size() < 200) {
+                    break;
+                }
+                pageNumber++;
             }
 
             ingredientRepository.saveAll(ingredients);
-            log.info("Persisted {} ingredients.", ingredients.size());
+            log.info("Persisted {} ingredients from USDA FDC.", ingredients.size());
             return ingredients.size();
 
         } catch (Exception e) {
-            log.error("Failed to seed ingredients: {}", e.getMessage(), e);
+            log.error("Failed to seed ingredients from USDA FDC: {}", e.getMessage(), e);
             return 0;
         }
+    }
+
+    /**
+     * Finds a nutrient by its USDA number string and returns its amount, or 0.0 if absent.
+     */
+    private static Double extractNutrient(List<Map<String, Object>> nutrients, String number) {
+        if (nutrients == null) {
+            return 0.0;
+        }
+        for (Map<String, Object> n : nutrients) {
+            if (number.equals(n.get("number"))) {
+                return extractDouble(n.get("amount"));
+            }
+        }
+        return 0.0;
     }
 
     private static Double extractDouble(Object value) {

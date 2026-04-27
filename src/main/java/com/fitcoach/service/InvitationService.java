@@ -11,8 +11,8 @@ import com.fitcoach.exception.ResourceNotFoundException;
 import com.fitcoach.repository.CoachRepository;
 import com.fitcoach.repository.InvitationRepository;
 import com.fitcoach.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,20 +22,33 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class InvitationService {
 
     private final InvitationRepository invitationRepository;
     private final CoachRepository coachRepository;
     private final UserRepository userRepository;
+    private final SubscriptionService subscriptionService;
 
     @Value("${app.invitation.expiry-days}")
     private int expiryDays;
+
+    public InvitationService(InvitationRepository invitationRepository,
+                              CoachRepository coachRepository,
+                              UserRepository userRepository,
+                              @Lazy SubscriptionService subscriptionService) {
+        this.invitationRepository = invitationRepository;
+        this.coachRepository = coachRepository;
+        this.userRepository = userRepository;
+        this.subscriptionService = subscriptionService;
+    }
 
     // ── Create Invitation ─────────────────────────────────────────────────────
     @Transactional
     public InvitationResponse createInvitation(String coachEmail, InvitationRequest request) {
         Coach coach = findCoachByEmail(coachEmail);
+
+        // Enforce subscription client limit before issuing new invitation
+        subscriptionService.assertCanInvite(coach);
 
         if (invitationRepository.existsByInviteeEmailAndCoachIdAndStatus(
                 request.getEmail(), coach.getId(), InvitationStatus.PENDING)) {

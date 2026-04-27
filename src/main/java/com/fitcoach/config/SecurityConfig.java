@@ -2,6 +2,8 @@ package com.fitcoach.config;
 
 import com.fitcoach.security.JwtAuthFilter;
 import com.fitcoach.security.CustomUserDetailsService;
+import com.fitcoach.security.RestAccessDeniedHandler;
+import com.fitcoach.security.RestAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,6 +34,8 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final CustomUserDetailsService userDetailsService;
+    private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+    private final RestAccessDeniedHandler restAccessDeniedHandler;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -39,6 +43,9 @@ public class SecurityConfig {
             .cors(withDefaults())
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(ex -> ex
+                    .authenticationEntryPoint(restAuthenticationEntryPoint)
+                    .accessDeniedHandler(restAccessDeniedHandler))
             .authorizeHttpRequests(auth -> auth
                 // Let browser/Flutter preflight requests pass through
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

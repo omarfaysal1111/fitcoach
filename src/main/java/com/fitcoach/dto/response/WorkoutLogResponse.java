@@ -52,5 +52,9 @@ public class WorkoutLogResponse {
         private int setNumber;
         private SetLogOutcome outcome;
         private String reason;
+        /** Weight lifted in kilograms for this set. Null when not recorded or bodyweight. */
+        private Double weightKg;
+        /** Actual reps performed for this set. Null when not recorded. */
+        private Integer reps;
     }
 }

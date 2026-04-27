@@ -13,6 +13,7 @@ public class TraineeProfileResponse {
     private String fullName;
     private String email;
     private String fitnessGoal;
+    private String traineeLevel;
     private Long coachId;
     private String coachName;
     private LocalDateTime createdAt;
@@ -25,4 +26,7 @@ public class TraineeProfileResponse {
     private int adherencePercent;
     private int missedWorkoutsCount;
     private int missedMealsCount;
+    private String coachFeedback;
+    private String cautionNotes;
+    private int currentStreak;
 }
