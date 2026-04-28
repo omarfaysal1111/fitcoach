@@ -615,7 +615,7 @@ public class CoachService {
                 .missedMealsCount(missedMealsCount)
                 .coachFeedback(trainee.getCoachFeedback())
                 .cautionNotes(trainee.getCautionNotes())
-                .currentStreak(traineeService.computeStreak(trainee.getId()))
+                .currentStreak(trainee.getCurrentStreak())
                 .build();
     }
 

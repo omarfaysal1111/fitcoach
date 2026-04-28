@@ -95,7 +95,7 @@ public class TraineeService {
                 .fullName(coach.getUser().getFullName())
                 .build();
 
-        int currentStreak = computeStreak(trainee.getId());
+        int currentStreak = trainee.getCurrentStreak();
         int[] nextBadge = nextStreakBadge(currentStreak);
         var streak = TraineeDashboardTodayResponse.Streak.builder()
                 .currentDays(currentStreak)
@@ -378,6 +378,10 @@ public class TraineeService {
                                         .completionDate(today)
                                         .completedAt(java.time.LocalDateTime.now())
                                         .build()));
+
+        int fresh = computeStreak(trainee.getId());
+        trainee.setCurrentStreak(fresh);
+        traineeRepository.save(trainee);
     }
 
 @Transactional

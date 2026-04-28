@@ -61,18 +61,20 @@ public class PaymentService {
                     claimedAmount, expectedPrice, desiredPlan.name()));
         }
 
-        // Run OCR to extract the actual amount from the screenshot
-        BigDecimal ocrAmount = ocrService.extractAmount(screenshot);
-        log.info("Payment submitted: coach={}, plan={}, claimed={}, ocr={}",
-                coachEmail, desiredPlan, claimedAmount, ocrAmount);
-
-        // Store screenshot
+        // Persist screenshot first — OCR uses transferTo / streams and must not run before store,
+        // or the multipart payload is exhausted and Files.copy in store fails on Tomcat's .tmp.
         String screenshotPath = null;
         try {
             screenshotPath = fileStorageService.store(screenshot, "payment_receipts");
         } catch (Exception e) {
             log.warn("Could not save payment screenshot: {}", e.getMessage());
         }
+
+        BigDecimal ocrAmount = screenshotPath != null
+                ? ocrService.extractAmount(fileStorageService.resolveStoredPath(screenshotPath))
+                : null;
+        log.info("Payment submitted: coach={}, plan={}, claimed={}, ocr={}",
+                coachEmail, desiredPlan, claimedAmount, ocrAmount);
 
         // Verify OCR amount
         boolean ocrVerified = isOcrAmountSufficient(ocrAmount, expectedPrice);

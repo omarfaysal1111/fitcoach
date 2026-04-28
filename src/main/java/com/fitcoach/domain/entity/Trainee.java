@@ -51,6 +51,10 @@ public class Trainee {
     @Builder.Default
     private TraineeStatus status = TraineeStatus.ACTIVE;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private int currentStreak = 0;
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;

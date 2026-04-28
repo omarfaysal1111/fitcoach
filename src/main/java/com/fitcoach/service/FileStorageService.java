@@ -61,6 +61,22 @@ public class FileStorageService {
     }
 
     /**
+     * Resolves a URL path returned by {@link #store} (e.g. {@code /uploads/inbody/x/y.pdf})
+     * to an absolute filesystem path under {@link #rootPath}.
+     */
+    public Path resolveStoredPath(String uploadsUrlPath) {
+        if (uploadsUrlPath == null || !uploadsUrlPath.startsWith("/uploads/")) {
+            throw new IllegalArgumentException("Not an uploads URL path: " + uploadsUrlPath);
+        }
+        String relativePath = uploadsUrlPath.substring("/uploads/".length());
+        Path filePath = rootPath.resolve(relativePath).normalize();
+        if (!filePath.startsWith(rootPath)) {
+            throw new IllegalArgumentException("Path escapes upload root: " + uploadsUrlPath);
+        }
+        return filePath;
+    }
+
+    /**
      * Deletes the file at the given relative URL path (as previously returned by {@link #store}).
      * Silently succeeds if the file no longer exists on disk.
      */
