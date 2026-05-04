@@ -17,6 +17,7 @@ public class SchemaCompatibilityInitializer implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         ensureTraineeStatusColumn();
+        addColumnIfMissing("trainees", "current_streak", "INTEGER NOT NULL DEFAULT 0");
         ensureProgressPicturesColumns();
     }
 
