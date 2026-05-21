@@ -166,15 +166,14 @@ public class CoachService {
     public List<CoachAlertResponse> getAlerts(String email) {
         Coach coach = findCoachByEmail(email);
         LocalDate today = LocalDate.now();
-        LocalDate windowStart = today.minusDays(6);
-        LocalDate windowEnd = today;
 
         List<Trainee> trainees = traineeRepository.findAllByCoachId(coach.getId());
         record PendingAlert(Trainee trainee, Adherence7d adherence) {}
         List<PendingAlert> pending = new ArrayList<>();
 
         for (Trainee trainee : trainees) {
-            Adherence7d a = computeAdherence7d(trainee.getId(), windowStart, windowEnd);
+            LocalDate cycleStart = cycleWindowStart(trainee);
+            Adherence7d a = computeAdherence7d(trainee.getId(), cycleStart, today);
             if (!a.hasAssignablePlans() || a.combinedPercent() >= 100) {
                 continue;
             }
@@ -197,7 +196,23 @@ public class CoachService {
     }
 
     /**
-     * Rolling 7-day adherence: workouts from active assignments (expected sessions/week prorated by
+     * Returns the start of the trainee's current 7-day adherence cycle.
+     * Cycles are anchored to the trainee's join date: cycle 1 = days 0–6, cycle 2 = days 7–13, etc.
+     * A trainee in the middle of a cycle gets a window from the cycle start to today (not a full 7 days),
+     * which is fair to beginners who haven't completed their first week yet.
+     */
+    private static LocalDate cycleWindowStart(Trainee trainee) {
+        LocalDate today = LocalDate.now();
+        LocalDate startDate = trainee.getCreatedAt() != null
+                ? trainee.getCreatedAt().toLocalDate()
+                : today;
+        long daysSinceStart = ChronoUnit.DAYS.between(startDate, today);
+        long cycleNumber = daysSinceStart / 7;
+        return startDate.plusDays(cycleNumber * 7);
+    }
+
+    /**
+     * Adherence for a given window: workouts from active assignments (expected sessions/week prorated by
      * overlap with the window and {@link PlanAssignment#getStartDate()}), nutrition from all assigned
      * plans (each meal once per day in the window). Combined score is the average of workout and
      * nutrition percentages when both apply; otherwise the single applicable score.
@@ -319,8 +334,7 @@ public class CoachService {
         }
 
         LocalDate today = LocalDate.now();
-        LocalDate joinedAt = trainee.getCreatedAt() == null ? today : trainee.getCreatedAt().toLocalDate();
-        LocalDate windowStart = joinedAt;
+        LocalDate windowStart = cycleWindowStart(trainee);
         LocalDate windowEnd = today;
 
         List<PlanAssignment> assignments = planAssignmentRepository.findByTrainee_Id(traineeId);
@@ -503,7 +517,7 @@ public class CoachService {
      
     private TraineeProfileResponse toTraineeResponse(Trainee trainee, Coach coach) {
         LocalDate today = LocalDate.now();
-        LocalDate joinedAt = trainee.getCreatedAt() == null ? today : trainee.getCreatedAt().toLocalDate();
+        LocalDate cycleStart = cycleWindowStart(trainee);
 
         List<PlanAssignment> assignments = planAssignmentRepository.findByTrainee_Id(trainee.getId());
 
@@ -531,8 +545,8 @@ public class CoachService {
                 .distinct()
                 .count();
 
-        int workoutsCompletedSinceJoin = (int) traineeWorkoutCompletionRepository
-                .findByTrainee_IdAndCompletionDateBetween(trainee.getId(), joinedAt, today)
+        int workoutsCompletedInCycle = (int) traineeWorkoutCompletionRepository
+                .findByTrainee_IdAndCompletionDateBetween(trainee.getId(), cycleStart, today)
                 .stream()
                 .filter(c -> c.getPlanSession() != null
                         && c.getPlanSession().getId() != null
@@ -551,8 +565,8 @@ public class CoachService {
                 .distinct()
                 .count();
 
-        int mealsCompletedSinceJoin = (int) traineeMealCompletionRepository
-                .findByTraineeIdAndCompletionDateBetween(trainee.getId(), joinedAt, today)
+        int mealsCompletedInCycle = (int) traineeMealCompletionRepository
+                .findByTraineeIdAndCompletionDateBetween(trainee.getId(), cycleStart, today)
                 .stream()
                 .filter(c -> c.getMeal() != null
                         && c.getMeal().getId() != null
@@ -561,14 +575,14 @@ public class CoachService {
                 .distinct()
                 .count();
 
-        int daysSinceJoin = (int) (ChronoUnit.DAYS.between(joinedAt, today) + 1);
+        int daysInCycle = (int) (ChronoUnit.DAYS.between(cycleStart, today) + 1);
 
-        int expectedWorkoutsSinceJoin = 0;
+        int expectedWorkoutsInCycle = 0;
         for (PlanAssignment a : assignments) {
             if (a.getStartDate() == null || a.getPlan() == null) {
                 continue;
             }
-            LocalDate effectiveStart = a.getStartDate().isAfter(joinedAt) ? a.getStartDate() : joinedAt;
+            LocalDate effectiveStart = a.getStartDate().isAfter(cycleStart) ? a.getStartDate() : cycleStart;
             if (effectiveStart.isAfter(today)) {
                 continue;
             }
@@ -578,21 +592,21 @@ public class CoachService {
                 continue;
             }
             long overlapDays = ChronoUnit.DAYS.between(effectiveStart, today) + 1;
-            expectedWorkoutsSinceJoin += (int) Math.round(sessionCount * (overlapDays / 7.0));
+            expectedWorkoutsInCycle += (int) Math.round(sessionCount * (overlapDays / 7.0));
         }
 
-        int expectedMealsSinceJoin = assignedMealIds.isEmpty() ? 0 : assignedMealIds.size() * daysSinceJoin;
+        int expectedMealsInCycle = assignedMealIds.isEmpty() ? 0 : assignedMealIds.size() * daysInCycle;
 
-        int workoutProgressPercent = expectedWorkoutsSinceJoin == 0
+        int workoutProgressPercent = expectedWorkoutsInCycle == 0
                 ? 0
-                : (int) Math.round((workoutsCompletedSinceJoin * 100.0) / expectedWorkoutsSinceJoin);
-        int nutritionProgressPercent = expectedMealsSinceJoin == 0
+                : (int) Math.round((workoutsCompletedInCycle * 100.0) / expectedWorkoutsInCycle);
+        int nutritionProgressPercent = expectedMealsInCycle == 0
                 ? 0
-                : (int) Math.round((mealsCompletedSinceJoin * 100.0) / expectedMealsSinceJoin);
+                : (int) Math.round((mealsCompletedInCycle * 100.0) / expectedMealsInCycle);
         int adherencePercent = (workoutProgressPercent + nutritionProgressPercent) / 2;
 
-        int missedWorkoutsCount = Math.max(0, expectedWorkoutsSinceJoin - workoutsCompletedSinceJoin);
-        int missedMealsCount = Math.max(0, expectedMealsSinceJoin - mealsCompletedSinceJoin);
+        int missedWorkoutsCount = Math.max(0, expectedWorkoutsInCycle - workoutsCompletedInCycle);
+        int missedMealsCount = Math.max(0, expectedMealsInCycle - mealsCompletedInCycle);
 
         return TraineeProfileResponse.builder()
                 .id(trainee.getId())
