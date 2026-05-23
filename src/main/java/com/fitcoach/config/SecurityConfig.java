@@ -49,10 +49,12 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Let browser/Flutter preflight requests pass through
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                // Public auth endpoints
+                // Public auth endpoints (must come BEFORE role-scoped rules)
                 .requestMatchers(HttpMethod.POST, "/auth/coaches/register").permitAll()
                 .requestMatchers(HttpMethod.POST, "/auth/trainees/register").permitAll()
                 .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/v1/auth/otp/send").permitAll()
+                .requestMatchers(HttpMethod.POST, "/v1/auth/otp/verify").permitAll()
                 // Coach-scoped endpoints
                 .requestMatchers("/coaches/**").hasRole("COACH")
                 .requestMatchers("/v1/**").hasRole("COACH")
