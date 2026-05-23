@@ -55,6 +55,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/v1/auth/otp/send").permitAll()
                 .requestMatchers(HttpMethod.POST, "/v1/auth/otp/verify").permitAll()
+                // Admin-scoped endpoints
+                .requestMatchers("/admin/**").hasRole("ADMIN")
                 // Coach-scoped endpoints
                 .requestMatchers("/coaches/**").hasRole("COACH")
                 .requestMatchers("/v1/**").hasRole("COACH")

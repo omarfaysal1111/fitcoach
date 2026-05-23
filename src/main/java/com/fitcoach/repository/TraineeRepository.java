@@ -14,4 +14,5 @@ public interface TraineeRepository extends JpaRepository<Trainee, Long> {
     List<Trainee> findAllByCoachId(Long coachId);
     boolean existsByUserId(Long userId);
     long countByCoachIdAndStatus(Long coachId, TraineeStatus status);
+    long countByStatus(TraineeStatus status);
 }
