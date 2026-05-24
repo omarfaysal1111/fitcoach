@@ -1,5 +1,7 @@
 package com.fitcoach.controller;
 
+import com.fitcoach.dto.request.AppleAuthRequest;
+import com.fitcoach.dto.request.GoogleAuthRequest;
 import com.fitcoach.dto.request.LoginRequest;
 import com.fitcoach.dto.request.RegisterCoachRequest;
 import com.fitcoach.dto.request.RegisterTraineeRequest;
@@ -52,5 +54,29 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(ApiResponse.ok("Login successful", response));
+    }
+
+    /**
+     * POST /api/auth/google
+     * Public – verifies a Google ID Token and returns an app JWT.
+     * Creates an account on first sign-in (coaches only; trainees also need invitationToken).
+     */
+    @PostMapping("/google")
+    public ResponseEntity<ApiResponse<AuthResponse>> loginWithGoogle(
+            @Valid @RequestBody GoogleAuthRequest request) {
+        AuthResponse response = authService.loginWithGoogle(request);
+        return ResponseEntity.ok(ApiResponse.ok("Google sign-in successful", response));
+    }
+
+    /**
+     * POST /api/auth/apple
+     * Public – verifies an Apple identity token and returns an app JWT.
+     * Creates an account on first sign-in (coaches only; trainees also need invitationToken).
+     */
+    @PostMapping("/apple")
+    public ResponseEntity<ApiResponse<AuthResponse>> loginWithApple(
+            @Valid @RequestBody AppleAuthRequest request) {
+        AuthResponse response = authService.loginWithApple(request);
+        return ResponseEntity.ok(ApiResponse.ok("Apple sign-in successful", response));
     }
 }

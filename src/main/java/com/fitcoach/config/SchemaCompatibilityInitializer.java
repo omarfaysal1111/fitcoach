@@ -19,6 +19,7 @@ public class SchemaCompatibilityInitializer implements ApplicationRunner {
         ensureTraineeStatusColumn();
         addColumnIfMissing("trainees", "current_streak", "INTEGER NOT NULL DEFAULT 0");
         ensureProgressPicturesColumns();
+        ensureSsoColumns();
     }
 
     /**
@@ -55,6 +56,39 @@ public class SchemaCompatibilityInitializer implements ApplicationRunner {
         addColumnIfMissing("progress_pictures", "back_picture_url", "TEXT");
         addColumnIfMissing("progress_pictures", "notes", "VARCHAR(500)");
         addColumnIfMissing("progress_pictures", "uploaded_at", "TIMESTAMP NOT NULL DEFAULT NOW()");
+    }
+
+    /**
+     * Adds {@code auth_provider} and {@code provider_subject} columns to the users table
+     * and creates a partial unique index to prevent duplicate SSO accounts.
+     * Safe to call on every startup — all operations are idempotent.
+     */
+    private void ensureSsoColumns() {
+        addColumnIfMissing("users", "auth_provider",    "VARCHAR(20) NOT NULL DEFAULT 'LOCAL'");
+        addColumnIfMissing("users", "provider_subject", "VARCHAR(255)");
+
+        // Partial unique index: only enforce uniqueness for non-LOCAL providers
+        boolean indexExists = Boolean.TRUE.equals(jdbcTemplate.queryForObject(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM pg_indexes
+                    WHERE schemaname = current_schema()
+                      AND tablename  = 'users'
+                      AND indexname  = 'uq_users_provider_subject'
+                )
+                """,
+                Boolean.class));
+
+        if (!indexExists) {
+            log.info("Creating partial unique index uq_users_provider_subject on users table.");
+            jdbcTemplate.execute(
+                    """
+                    CREATE UNIQUE INDEX uq_users_provider_subject
+                        ON users (auth_provider, provider_subject)
+                        WHERE auth_provider <> 'LOCAL'
+                    """);
+        }
     }
 
     private void addColumnIfMissing(String tableName, String columnName, String definition) {

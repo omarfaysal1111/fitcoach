@@ -2,6 +2,7 @@ package com.fitcoach.domain.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fitcoach.domain.enums.AuthProvider;
 import com.fitcoach.domain.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
@@ -43,6 +44,24 @@ public class User {
     @Column(nullable = false)
     @Builder.Default
     private boolean enabled = true;
+
+    /**
+     * How this account was created / authenticates.
+     * LOCAL  = classic password account.
+     * GOOGLE = created via Google Sign-In.
+     * APPLE  = created via Sign in with Apple.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private AuthProvider authProvider = AuthProvider.LOCAL;
+
+    /**
+     * Stable user ID from the identity provider (Google {@code sub} / Apple {@code sub}).
+     * NULL for LOCAL accounts.
+     */
+    @Column(length = 255)
+    private String providerSubject;
 
     /**
      * Epoch seconds of the {@code iat} claim for the latest issued JWT. Tokens with an earlier

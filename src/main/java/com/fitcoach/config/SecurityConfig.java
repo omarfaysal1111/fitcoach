@@ -53,6 +53,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/auth/coaches/register").permitAll()
                 .requestMatchers(HttpMethod.POST, "/auth/trainees/register").permitAll()
                 .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/auth/google").permitAll()
+                .requestMatchers(HttpMethod.POST, "/auth/apple").permitAll()
                 .requestMatchers(HttpMethod.POST, "/v1/auth/otp/send").permitAll()
                 .requestMatchers(HttpMethod.POST, "/v1/auth/otp/verify").permitAll()
                 // Admin-scoped endpoints

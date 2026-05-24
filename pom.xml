@@ -79,6 +79,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Google ID Token verification (SSO) -->
+        <dependency>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client</artifactId>
+            <version>2.7.0</version>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
