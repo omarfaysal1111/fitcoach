@@ -36,10 +36,8 @@ public class WorkoutPlanService {
 
     @Transactional
     public WorkoutPlanResponse createPlan(CreatePlanRequest request, Long authenticatedCoachId) {
-        if (!request.getCoachId().equals(authenticatedCoachId)) {
-            throw new AccessDeniedException("coachId must match the authenticated coach");
-        }
-        Coach coach = coachRepository.findById(request.getCoachId())
+        // coachId is always taken from the authenticated JWT — never from the request body
+        Coach coach = coachRepository.findById(authenticatedCoachId)
                 .orElseThrow(() -> new ResourceNotFoundException("Coach not found"));
 
         WorkoutPlan plan = WorkoutPlan.builder()

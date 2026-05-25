@@ -10,6 +10,8 @@ public class AuthResponse {
     private String token;
     private String tokenType;
     private Long userId;
+    /** Coach entity ID — only populated when role == COACH. Null for trainees. */
+    private Long coachId;
     private String fullName;
     private String email;
     private Role role;

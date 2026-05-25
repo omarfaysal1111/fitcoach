@@ -173,6 +173,12 @@ public class AuthService {
                     throw new ConflictException(
                             "An account with this email already exists. Please log in with your password.");
                 }
+                if (user.getAuthProvider() != provider) {
+                    // Email belongs to a different SSO provider (e.g. Apple account, not Google)
+                    throw new ConflictException(
+                            "An account with this email already exists via a different sign-in method. " +
+                            "Please use your original sign-in method.");
+                }
                 // Same SSO provider, missing subject — backfill it
                 user.setProviderSubject(providerSubject);
             }
@@ -245,10 +251,17 @@ public class AuthService {
     }
 
     private AuthResponse buildAuthResponse(String token, User user) {
+        Long coachId = null;
+        if (user.isCoach()) {
+            coachId = coachRepository.findByUserId(user.getId())
+                    .map(Coach::getId)
+                    .orElse(null);
+        }
         return AuthResponse.builder()
                 .token(token)
                 .tokenType("Bearer")
                 .userId(user.getId())
+                .coachId(coachId)
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .role(user.getRole())
