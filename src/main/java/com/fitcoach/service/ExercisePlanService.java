@@ -25,6 +25,7 @@ public class ExercisePlanService {
     private final CoachRepository coachRepository;
     private final TraineeRepository traineeRepository;
     private final ExerciseRepository exerciseRepository;
+    private final FirebaseNotificationService notificationService;
 
     @Transactional
     public WorkoutPlan createExercisePlan(Long coachId, CreateExercisePlanRequest request) {
@@ -109,7 +110,19 @@ public class ExercisePlanService {
             }
         }
 
-        return workoutPlanRepository.save(plan);
+        WorkoutPlan saved = workoutPlanRepository.save(plan);
+
+        // Notify newly assigned trainees
+        for (Trainee t : newTrainees) {
+            String fcmToken = t.getUser() != null ? t.getUser().getFcmToken() : null;
+            notificationService.sendToToken(
+                    fcmToken,
+                    "New Workout Plan Assigned!",
+                    "Your coach assigned you a new workout plan: " + plan.getName()
+            );
+        }
+
+        return saved;
     }
 
     private PlanSession createPlanSession(CreatePlanSessionRequest request, WorkoutPlan plan, int dayOrder) {

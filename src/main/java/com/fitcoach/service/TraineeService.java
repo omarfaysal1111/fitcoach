@@ -16,6 +16,7 @@ import com.fitcoach.domain.enums.GoalStatus;
 import com.fitcoach.dto.request.ExtraMealRequest;
 import com.fitcoach.dto.request.IngredientSwapRequest;
 import com.fitcoach.dto.request.MealCompletionRequest;
+import com.fitcoach.dto.request.TraineeOnboardingRequest;
 import com.fitcoach.dto.request.UpdateTraineeRequest;
 import com.fitcoach.dto.response.ExtraMealLogResponse;
 import com.fitcoach.dto.response.CoachProfileResponse;
@@ -65,6 +66,7 @@ public class TraineeService {
     private final MealIngredientDeviationRepository mealIngredientDeviationRepository;
     private final CoachGoalRepository coachGoalRepository;
     private final TraineeWaterIntakeRepository traineeWaterIntakeRepository;
+    private final FirebaseNotificationService notificationService;
 
     private static final int[] STREAK_BADGE_THRESHOLDS = {7, 14, 30, 60, 100, 180, 365};
     private static final String[] STREAK_BADGE_NAMES = {
@@ -382,6 +384,16 @@ public class TraineeService {
         int fresh = computeStreak(trainee.getId());
         trainee.setCurrentStreak(fresh);
         traineeRepository.save(trainee);
+
+        // Notify coach that trainee completed today's workout
+        Coach coach = trainee.getCoach();
+        if (coach != null && coach.getUser() != null) {
+            notificationService.sendToToken(
+                    coach.getUser().getFcmToken(),
+                    trainee.getUser().getFullName() + " completed a workout!",
+                    trainee.getUser().getFullName() + " just finished today's workout session."
+            );
+        }
     }
 
 @Transactional
@@ -558,17 +570,49 @@ public class TraineeService {
                 .orElseThrow(() -> new ResourceNotFoundException("Trainee profile not found"));
     }
 
+    @Transactional
+    public TraineeProfileResponse completeOnboarding(String email, TraineeOnboardingRequest req) {
+        Trainee trainee = getTraineeByEmail(email);
+        var user = trainee.getUser();
+        if (req.getFullName() != null && !req.getFullName().isBlank()) {
+            user.setFullName(req.getFullName().trim());
+            userRepository.save(user);
+        }
+        if (req.getHeight() != null)        trainee.setHeight(req.getHeight());
+        if (req.getWeight() != null)        trainee.setWeight(req.getWeight());
+        if (req.getDateOfBirth() != null)   trainee.setDateOfBirth(req.getDateOfBirth());
+        if (req.getGender() != null)        trainee.setGender(req.getGender());
+        if (req.getHealthHistory() != null) trainee.setHealthHistory(req.getHealthHistory());
+        if (req.getMedications() != null)   trainee.setMedications(req.getMedications());
+        if (req.getFitnessGoal() != null)   trainee.setFitnessGoal(req.getFitnessGoal());
+        if (req.getTraineeLevel() != null)  trainee.setTraineeLevel(req.getTraineeLevel());
+        trainee.setOnboardingComplete(true);
+        return toResponse(traineeRepository.save(trainee));
+    }
+
     private TraineeProfileResponse toResponse(Trainee trainee) {
         var coach = trainee.getCoach();
+        int currentStreak = trainee.getCurrentStreak();
         return TraineeProfileResponse.builder()
                 .id(trainee.getId())
                 .userId(trainee.getUser().getId())
                 .fullName(trainee.getUser().getFullName())
                 .email(trainee.getUser().getEmail())
                 .fitnessGoal(trainee.getFitnessGoal())
+                .traineeLevel(trainee.getTraineeLevel())
                 .coachId(coach.getId())
                 .coachName(coach.getUser().getFullName())
+                .coachFeedback(trainee.getCoachFeedback())
+                .cautionNotes(trainee.getCautionNotes())
+                .currentStreak(currentStreak)
                 .createdAt(trainee.getCreatedAt())
+                .height(trainee.getHeight())
+                .weight(trainee.getWeight())
+                .dateOfBirth(trainee.getDateOfBirth())
+                .gender(trainee.getGender())
+                .healthHistory(trainee.getHealthHistory())
+                .medications(trainee.getMedications())
+                .onboardingComplete(trainee.isOnboardingComplete())
                 .build();
     }
 }

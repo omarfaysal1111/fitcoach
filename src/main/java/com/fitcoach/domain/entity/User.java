@@ -69,6 +69,10 @@ public class User {
      */
     private Long jwtIssuedEpochSec;
 
+    /** Firebase Cloud Messaging device token — used to send push notifications. */
+    @Column(length = 512)
+    private String fcmToken;
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;

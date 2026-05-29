@@ -4,8 +4,10 @@ import com.fitcoach.domain.entity.NutritionPlan;
 import com.fitcoach.domain.entity.WorkoutPlan;
 import com.fitcoach.dto.request.ExtraMealRequest;
 import com.fitcoach.dto.request.MealCompletionRequest;
+import com.fitcoach.dto.request.TraineeOnboardingRequest;
 import com.fitcoach.dto.request.UpdateTraineeRequest;
 import com.fitcoach.dto.request.WaterIntakeUpsertRequest;
+import com.fitcoach.dto.response.CoachPortfolioResponse;
 import com.fitcoach.dto.response.ExtraMealLogResponse;
 import com.fitcoach.dto.response.ApiResponse;
 import com.fitcoach.dto.response.CoachProfileResponse;
@@ -20,6 +22,7 @@ import com.fitcoach.dto.response.TraineePlanSummaryResponse;
 import com.fitcoach.dto.response.TraineeWorkoutPlanSessionsResponse;
 import com.fitcoach.dto.response.TraineeProfileResponse;
 import com.fitcoach.dto.response.WaterIntakeResponse;
+import com.fitcoach.service.CoachPortfolioService;
 import com.fitcoach.service.ExercisePlanService;
 import com.fitcoach.service.InBodyReportService;
 import com.fitcoach.service.NutritionPlanService;
@@ -54,6 +57,16 @@ public class TraineeController {
     private final ProgressPhotoService progressPhotoService;
     private final InBodyReportService inBodyReportService;
     private final WaterIntakeService waterIntakeService;
+    private final CoachPortfolioService coachPortfolioService;
+
+    /** POST /api/trainees/me/onboarding – submit onboarding form (measurements, health, fitness level) */
+    @PostMapping("/me/onboarding")
+    public ResponseEntity<ApiResponse<TraineeProfileResponse>> completeOnboarding(
+            @AuthenticationPrincipal UserDetails principal,
+            @Valid @RequestBody TraineeOnboardingRequest request) {
+        if (principal == null) throw new AuthenticationCredentialsNotFoundException("Unauthenticated");
+        return ResponseEntity.ok(ApiResponse.ok(traineeService.completeOnboarding(principal.getUsername(), request)));
+    }
 
     /** GET /api/trainees/me – authenticated trainee's own profile */
     @GetMapping("/me")
@@ -139,6 +152,14 @@ public class TraineeController {
     public ResponseEntity<ApiResponse<CoachProfileResponse>> getMyCoach(
             @AuthenticationPrincipal UserDetails principal) {
         return ResponseEntity.ok(ApiResponse.ok(traineeService.getMyCoach(principal.getUsername())));
+    }
+
+    /** GET /api/trainees/coach/portfolio – view the assigned coach's portfolio */
+    @GetMapping("/coach/portfolio")
+    public ResponseEntity<ApiResponse<CoachPortfolioResponse>> getMyCoachPortfolio(
+            @AuthenticationPrincipal UserDetails principal) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                coachPortfolioService.getPortfolioForTrainee(principal.getUsername())));
     }
     
     /** GET /api/trainees/me/nutrition-plans – get my assigned nutrition plans (summaries only) */

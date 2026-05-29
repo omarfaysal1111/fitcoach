@@ -3,6 +3,7 @@ package com.fitcoach.dto.response;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -29,4 +30,13 @@ public class TraineeProfileResponse {
     private String coachFeedback;
     private String cautionNotes;
     private int currentStreak;
+
+    // onboarding fields
+    private Double height;
+    private Double weight;
+    private LocalDate dateOfBirth;
+    private String gender;
+    private String healthHistory;
+    private String medications;
+    private boolean onboardingComplete;
 }

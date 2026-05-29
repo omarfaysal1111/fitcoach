@@ -8,6 +8,7 @@ import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -54,6 +55,35 @@ public class Trainee {
     @Column(nullable = false)
     @Builder.Default
     private int currentStreak = 0;
+
+    // ── Onboarding profile fields ─────────────────────────────────────────────
+
+    /** Height in centimetres (e.g. 175). */
+    private Double height;
+
+    /** Weight in kilograms at the time of onboarding. */
+    private Double weight;
+
+    /** Date of birth. */
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
+    /** "male" | "female" | "other" */
+    @Column(length = 20)
+    private String gender;
+
+    /** Free-text medical / health history (injuries, chronic conditions, etc.) */
+    @Column(name = "health_history", columnDefinition = "TEXT")
+    private String healthHistory;
+
+    /** Comma-separated list of current medications, or free text. */
+    @Column(columnDefinition = "TEXT")
+    private String medications;
+
+    /** True once the trainee completes the onboarding form in-app. */
+    @Column(name = "onboarding_complete", nullable = false)
+    @Builder.Default
+    private boolean onboardingComplete = false;
 
     @CreatedDate
     @Column(updatable = false)

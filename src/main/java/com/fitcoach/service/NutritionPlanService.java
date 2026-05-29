@@ -21,6 +21,7 @@ public class NutritionPlanService {
     private final CoachRepository coachRepository;
     private final TraineeRepository traineeRepository;
     private final IngredientRepository ingredientRepository;
+    private final FirebaseNotificationService notificationService;
 
     @Transactional
     public NutritionPlan createNutritionPlan(Long coachId, CreateNutritionPlanRequest request) {
@@ -92,6 +93,18 @@ public class NutritionPlanService {
             }
         }
 
-        return nutritionPlanRepository.save(plan);
+        NutritionPlan saved = nutritionPlanRepository.save(plan);
+
+        // Notify newly assigned trainees
+        for (Trainee t : newTrainees) {
+            String fcmToken = t.getUser() != null ? t.getUser().getFcmToken() : null;
+            notificationService.sendToToken(
+                    fcmToken,
+                    "New Nutrition Plan Assigned!",
+                    "Your coach assigned you a new nutrition plan: " + plan.getName()
+            );
+        }
+
+        return saved;
     }
 }
