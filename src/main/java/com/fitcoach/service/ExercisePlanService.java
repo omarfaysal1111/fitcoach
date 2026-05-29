@@ -118,7 +118,7 @@ public class ExercisePlanService {
             notificationService.sendToToken(
                     fcmToken,
                     "New Workout Plan Assigned!",
-                    "Your coach assigned you a new workout plan: " + plan.getName()
+                    "Your coach assigned you a new workout plan: " + plan.getTitle()
             );
         }
 

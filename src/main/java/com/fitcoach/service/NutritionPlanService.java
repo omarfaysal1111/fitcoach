@@ -101,7 +101,7 @@ public class NutritionPlanService {
             notificationService.sendToToken(
                     fcmToken,
                     "New Nutrition Plan Assigned!",
-                    "Your coach assigned you a new nutrition plan: " + plan.getName()
+                    "Your coach assigned you a new nutrition plan: " + plan.getTitle()
             );
         }
 
