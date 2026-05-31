@@ -305,6 +305,7 @@ public class TraineeService {
                         .rest(we.getRestSeconds() != null ? we.getRestSeconds() + "s" : null)
                         .muscleGroup(we.getExercise().getTargetedMuscle())
                         .status("not_started")
+                        .videoUrl(we.getExercise().getVideoLink())
                         .build());
             }
         }

@@ -1,5 +1,7 @@
 package com.fitcoach.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fitcoach.domain.entity.Exercise;
 import com.fitcoach.domain.entity.Ingredient;
 import com.fitcoach.dto.response.CatalogSeedResponse;
@@ -22,6 +24,8 @@ public class DataSeedingService implements CommandLineRunner {
 
     private static final String WGER_BASE = "https://wger.de/api/v2";
     private static final int PAGE_SIZE = 100;
+    private static final String EXERCISEDB_JSON =
+            "https://raw.githubusercontent.com/bootstrapping-lab/exercisedb-api/main/src/data/exercises.json";
 
     // USDA FDC Foundation Foods API
     private static final String USDA_FDC_API_KEY = "mLBKvhwX2xRVLpcswGHJmAxgvTB14Folwkhw9SSs";
@@ -53,9 +57,14 @@ public class DataSeedingService implements CommandLineRunner {
     public void run(String... args) {
         if (exerciseRepository.count() == 0) {
             int n = fetchAndPersistExercises();
-            log.info("Startup: seeded {} exercises from wger.", n);
+            log.info("Startup: seeded {} exercises from ExerciseDB.", n);
         } else {
-            log.info("Exercises already present — skipping startup seed.");
+            int fixed = migrateWgerVideoLinks();
+            if (fixed > 0) {
+                log.info("Startup: migrated {} wger video links → ExerciseDB gif URLs.", fixed);
+            } else {
+                log.info("Startup: no stale video links found — skipping migration.");
+            }
         }
         if (ingredientRepository.count() == 0) {
             int n = fetchAndPersistIngredients();
@@ -121,77 +130,181 @@ public class DataSeedingService implements CommandLineRunner {
                 .build();
     }
 
-    private int fetchAndPersistExercises() {
-        log.info("Fetching English exercises from wger...");
+    /**
+     * For exercises already in the DB that still have wger/null videoLinks,
+     * fetch the ExerciseDB dataset and assign gifUrls using a three-tier strategy:
+     *   1. Exact name match (case-insensitive)
+     *   2. Partial name match (one name contains the other)
+     *   3. Muscle-group fallback (any exercisedb GIF targeting the same muscle)
+     * Updates videoLink in-place — does NOT delete rows, so FK references are safe.
+     */
+    @SuppressWarnings("unchecked")
+    private int migrateWgerVideoLinks() {
+        List<Exercise> stale = exerciseRepository.findAll().stream()
+                .filter(e -> e.getVideoLink() == null || e.getVideoLink().contains("wger.de"))
+                .toList();
+        if (stale.isEmpty()) return 0;
+
+        log.info("Migrating {} exercises with wger/null video links...", stale.size());
         try {
             RestTemplate restTemplate = new RestTemplate();
+            String json = restTemplate.getForObject(EXERCISEDB_JSON, String.class);
+            if (json == null || json.isBlank()) {
+                log.warn("ExerciseDB dataset unavailable — skipping migration.");
+                return 0;
+            }
+            List<Map<String, Object>> raw =
+                    new ObjectMapper().readValue(json, new TypeReference<>() {});
+            if (raw.isEmpty()) {
+                log.warn("ExerciseDB dataset was empty — skipping migration.");
+                return 0;
+            }
+
+            // Pre-build lookup structures
+            Map<String, String> gifByExactName = new java.util.HashMap<>();
+            Map<String, List<String>> gifsByMuscle = new java.util.HashMap<>();
+
+            for (Map<String, Object> ex : raw) {
+                String name = (String) ex.get("name");
+                String gif  = (String) ex.get("gifUrl");
+                if (name == null || gif == null) continue;
+
+                gifByExactName.put(name.trim().toLowerCase(), gif);
+
+                List<String> targetMuscles = (List<String>) ex.get("targetMuscles");
+                List<String> bodyParts     = (List<String>) ex.get("bodyParts");
+                List<String> muscleKeys    = new ArrayList<>();
+                if (targetMuscles != null) muscleKeys.addAll(targetMuscles);
+                if (bodyParts     != null) muscleKeys.addAll(bodyParts);
+                for (String m : muscleKeys) {
+                    gifsByMuscle.computeIfAbsent(m.toLowerCase(), k -> new ArrayList<>()).add(gif);
+                }
+            }
+
+            // Muscle mapping: wger category names → exercisedb muscle/bodypart keywords
+            Map<String, List<String>> muscleMap = new java.util.HashMap<>();
+            muscleMap.put("legs",      List.of("upper legs", "lower legs", "quads", "hamstrings", "glutes", "calves"));
+            muscleMap.put("arms",      List.of("upper arms", "forearms", "biceps", "triceps"));
+            muscleMap.put("back",      List.of("back", "lats", "spine", "traps"));
+            muscleMap.put("chest",     List.of("chest", "pectorals"));
+            muscleMap.put("shoulders", List.of("shoulders", "delts"));
+            muscleMap.put("abs",       List.of("waist", "abs"));
+            muscleMap.put("cardio",    List.of("cardio", "waist"));
+            muscleMap.put("general",   List.of("upper legs", "chest", "back"));
+
+            int updated = 0;
+            for (Exercise exercise : stale) {
+                String nameLower = exercise.getName() == null ? "" : exercise.getName().trim().toLowerCase();
+
+                // Tier 1: exact name
+                String gif = gifByExactName.get(nameLower);
+
+                // Tier 2: partial name match
+                if (gif == null) {
+                    for (Map.Entry<String, String> entry : gifByExactName.entrySet()) {
+                        if (entry.getKey().contains(nameLower) || nameLower.contains(entry.getKey())) {
+                            gif = entry.getValue();
+                            break;
+                        }
+                    }
+                }
+
+                // Tier 3: muscle-group fallback
+                if (gif == null) {
+                    String muscle = exercise.getTargetedMuscle() == null
+                            ? "general" : exercise.getTargetedMuscle().trim().toLowerCase();
+                    List<String> keywords = muscleMap.getOrDefault(muscle, muscleMap.get("general"));
+                    outer:
+                    for (String keyword : keywords) {
+                        List<String> candidates = gifsByMuscle.get(keyword);
+                        if (candidates != null && !candidates.isEmpty()) {
+                            gif = candidates.get(updated % candidates.size());
+                            break outer;
+                        }
+                    }
+                }
+
+                exercise.setVideoLink(gif);
+                updated++;
+            }
+
+            exerciseRepository.saveAll(stale);
+            return updated;
+
+        } catch (Exception e) {
+            log.error("Failed to migrate wger video links: {}", e.getMessage(), e);
+            return 0;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private int fetchAndPersistExercises() {
+        log.info("Fetching exercises from ExerciseDB dataset...");
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            String json = restTemplate.getForObject(EXERCISEDB_JSON, String.class);
+            if (json == null || json.isBlank()) {
+                log.warn("ExerciseDB dataset returned empty response.");
+                return 0;
+            }
+            List<Map<String, Object>> raw =
+                    new ObjectMapper().readValue(json, new TypeReference<>() {});
+            if (raw.isEmpty()) {
+                log.warn("ExerciseDB dataset was empty.");
+                return 0;
+            }
+
             List<Exercise> exercises = new ArrayList<>();
-            String url = WGER_BASE + "/exerciseinfo/?language=2&limit=" + PAGE_SIZE + "&offset=0";
+            for (Map<String, Object> ex : raw) {
+                String name = (String) ex.get("name");
+                if (name == null || name.isBlank()) continue;
 
-            while (url != null) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> response = restTemplate.getForObject(url, Map.class);
-                if (response == null) {
-                    break;
+                List<String> instructions = (List<String>) ex.get("instructions");
+                String description = buildDescription(instructions);
+
+                String gifUrl = (String) ex.get("gifUrl");
+
+                List<String> targetMuscles = (List<String>) ex.get("targetMuscles");
+                List<String> bodyParts    = (List<String>) ex.get("bodyParts");
+                String muscle = "General";
+                if (targetMuscles != null && !targetMuscles.isEmpty()) {
+                    muscle = capitalize(targetMuscles.get(0));
+                } else if (bodyParts != null && !bodyParts.isEmpty()) {
+                    muscle = capitalize(bodyParts.get(0));
                 }
 
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> results =
-                        (List<Map<String, Object>>) response.get("results");
-                if (results == null || results.isEmpty()) {
-                    break;
-                }
-
-                for (Map<String, Object> result : results) {
-                    String name = null;
-                    String description = "";
-
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> translations =
-                            (List<Map<String, Object>>) result.get("translations");
-
-                    if (translations != null) {
-                        for (Map<String, Object> t : translations) {
-                            if (Integer.valueOf(2).equals(t.get("language"))) {
-                                name = (String) t.get("name");
-                                description = (String) t.get("description");
-                                break;
-                            }
-                        }
-                        if ((name == null || name.isBlank()) && !translations.isEmpty()) {
-                            name = (String) translations.get(0).get("name");
-                            description = (String) translations.get(0).get("description");
-                        }
-                    }
-
-                    if (name == null || name.isBlank()) {
-                        continue;
-                    }
-
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> category = (Map<String, Object>) result.get("category");
-                    String muscle = category != null ? (String) category.get("name") : "General";
-
-                    exercises.add(Exercise.builder()
-                            .name(name.trim())
-                            .description(description != null ? description.trim() : "")
-                            .targetedMuscle(muscle)
-                            .videoLink(WGER_BASE + "/video/?exercise=" + result.get("id"))
-                            .build());
-                }
-
-                url = (String) response.get("next");
-                log.info("  → {} exercises parsed...", exercises.size());
+                exercises.add(Exercise.builder()
+                        .name(capitalize(name.trim()))
+                        .description(description)
+                        .targetedMuscle(muscle)
+                        .videoLink(gifUrl)
+                        .build());
             }
 
             exerciseRepository.saveAll(exercises);
-            log.info("Persisted {} exercises.", exercises.size());
+            log.info("Persisted {} exercises from ExerciseDB dataset.", exercises.size());
             return exercises.size();
 
         } catch (Exception e) {
-            log.error("Failed to seed exercises: {}", e.getMessage(), e);
+            log.error("Failed to seed exercises from ExerciseDB dataset: {}", e.getMessage(), e);
             return 0;
         }
+    }
+
+    private static String buildDescription(List<String> instructions) {
+        if (instructions == null || instructions.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder("<ol>");
+        for (String step : instructions) {
+            String text = step.replaceAll("(?i)^Step:\\d+\\s*", "").trim();
+            sb.append("<li>").append(text).append("</li>");
+        }
+        sb.append("</ol>");
+        return sb.toString();
+    }
+
+    private static String capitalize(String s) {
+        if (s == null || s.isEmpty()) return s;
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
     private int fetchAndPersistIngredients() {
@@ -285,5 +398,48 @@ public class DataSeedingService implements CommandLineRunner {
             }
         }
         return 0.0;
+    }
+
+    /**
+     * Iterates all exercises whose videoLink still points to the wger API list endpoint
+     * (i.e. contains "/api/v2/video/?exercise=") and replaces it with the actual video file URL
+     * by calling that endpoint and reading results[0].video.
+     *
+     * @return number of records updated
+     */
+    public int refreshVideoLinks() {
+        List<Exercise> all = exerciseRepository.findAll();
+        RestTemplate restTemplate = new RestTemplate();
+        int updated = 0;
+
+        for (Exercise exercise : all) {
+            String link = exercise.getVideoLink();
+            if (link == null || !link.contains("/video/?exercise=")) {
+                continue;
+            }
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> response = restTemplate.getForObject(link, Map.class);
+                if (response == null) continue;
+
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> results = (List<Map<String, Object>>) response.get("results");
+                if (results == null || results.isEmpty()) {
+                    exercise.setVideoLink(null);
+                } else {
+                    Object videoUrl = results.get(0).get("video");
+                    exercise.setVideoLink(videoUrl instanceof String ? (String) videoUrl : null);
+                }
+                updated++;
+            } catch (Exception e) {
+                log.warn("Could not resolve video link for exercise {}: {}", exercise.getId(), e.getMessage());
+            }
+        }
+
+        if (updated > 0) {
+            exerciseRepository.saveAll(all);
+        }
+        log.info("refreshVideoLinks: updated {} exercise video links.", updated);
+        return updated;
     }
 }

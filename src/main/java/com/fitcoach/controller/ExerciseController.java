@@ -1,8 +1,8 @@
 package com.fitcoach.controller;
 
-import com.fitcoach.domain.entity.Exercise;
 import com.fitcoach.dto.response.ApiResponse;
-import com.fitcoach.repository.ExerciseRepository;
+import com.fitcoach.dto.response.ExerciseResponse;
+import com.fitcoach.service.ExerciseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,11 +16,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ExerciseController {
 
-    private final ExerciseRepository exerciseRepository;
+    private final ExerciseService exerciseService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<Exercise>>> getAllExercises() {
-        List<Exercise> exercises = exerciseRepository.findAll();
+    public ResponseEntity<ApiResponse<List<ExerciseResponse>>> getAllExercises() {
+        List<ExerciseResponse> exercises = exerciseService.getAllExercises();
         return ResponseEntity.ok(ApiResponse.ok("Exercises retrieved successfully", exercises));
     }
 }

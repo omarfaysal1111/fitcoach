@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 /**
  * On-demand wger catalog seeding (exercises + ingredients). Coach-only.
  */
@@ -45,5 +47,23 @@ public class CatalogSeedController {
 
         CatalogSeedResponse result = dataSeedingService.seedCatalog(replace);
         return ResponseEntity.ok(ApiResponse.ok("Catalog seed finished", result));
+    }
+
+    /**
+     * POST /coaches/catalog/refresh-videos
+     * <p>
+     * Resolves each exercise's videoLink from the wger API list URL to the actual video file URL.
+     * Call this once after the initial seed to fix existing records.
+     */
+    @PostMapping("/refresh-videos")
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> refreshVideoLinks(Authentication authentication) {
+        boolean isCoach = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_COACH"));
+        if (!isCoach) {
+            return ResponseEntity.status(403).body(ApiResponse.error("Only coaches can trigger video link refresh"));
+        }
+
+        int updated = dataSeedingService.refreshVideoLinks();
+        return ResponseEntity.ok(ApiResponse.ok("Video links refreshed", Map.of("updated", updated)));
     }
 }
