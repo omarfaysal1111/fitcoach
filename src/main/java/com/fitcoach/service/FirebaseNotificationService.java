@@ -12,6 +12,29 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class FirebaseNotificationService {
 
+    public void sendChatNotification(String fcmToken, String senderName, String body, String conversationId) {
+        if (fcmToken == null || fcmToken.isBlank()) return;
+        if (FirebaseApp.getApps().isEmpty()) {
+            log.debug("Firebase not initialized — skipping chat notification");
+            return;
+        }
+        Message message = Message.builder()
+                .setNotification(Notification.builder()
+                        .setTitle(senderName)
+                        .setBody(body)
+                        .build())
+                .putData("conversationId", conversationId != null ? conversationId : "")
+                .putData("type", "chat")
+                .setToken(fcmToken)
+                .build();
+        try {
+            String response = FirebaseMessaging.getInstance().send(message);
+            log.debug("FCM chat sent: {}", response);
+        } catch (FirebaseMessagingException e) {
+            log.warn("FCM chat send failed: {}", e.getMessage());
+        }
+    }
+
     public void sendToToken(String fcmToken, String title, String body) {
         if (fcmToken == null || fcmToken.isBlank()) return;
         if (FirebaseApp.getApps().isEmpty()) {
