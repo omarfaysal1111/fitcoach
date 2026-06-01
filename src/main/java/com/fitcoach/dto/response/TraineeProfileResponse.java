@@ -29,6 +29,7 @@ public class TraineeProfileResponse {
     private int missedMealsCount;
     private String coachFeedback;
     private String cautionNotes;
+    private String traineeNoteToCoach;
     private int currentStreak;
 
     // onboarding fields

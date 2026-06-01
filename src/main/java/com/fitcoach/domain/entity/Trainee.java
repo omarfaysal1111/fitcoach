@@ -47,6 +47,10 @@ public class Trainee {
     @Column(columnDefinition = "TEXT")
     private String cautionNotes;
 
+    /** Latest note submitted by the trainee to their coach. */
+    @Column(columnDefinition = "TEXT", name = "trainee_note_to_coach")
+    private String traineeNoteToCoach;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default

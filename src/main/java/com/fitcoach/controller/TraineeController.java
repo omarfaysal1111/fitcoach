@@ -4,6 +4,7 @@ import com.fitcoach.domain.entity.NutritionPlan;
 import com.fitcoach.domain.entity.WorkoutPlan;
 import com.fitcoach.dto.request.ExtraMealRequest;
 import com.fitcoach.dto.request.MealCompletionRequest;
+import com.fitcoach.dto.request.TraineeNoteRequest;
 import com.fitcoach.dto.request.TraineeOnboardingRequest;
 import com.fitcoach.dto.request.UpdateTraineeRequest;
 import com.fitcoach.dto.request.WaterIntakeUpsertRequest;
@@ -258,6 +259,19 @@ public ResponseEntity<ApiResponse<List<NutritionPlanDetailedResponse>>> getMyNut
         TraineeWorkoutPlanSessionsResponse body =
                 traineeService.getWorkoutPlanSessions(principal.getUsername(), planId);
         return ResponseEntity.ok(ApiResponse.ok(body));
+    }
+
+    /** POST /api/trainees/me/notes – trainee sends a note to their coach */
+    @PostMapping("/me/notes")
+    public ResponseEntity<ApiResponse<Void>> sendNoteToCoach(
+            @AuthenticationPrincipal UserDetails principal,
+            @RequestBody TraineeNoteRequest request) {
+        if (request.getNote() == null || request.getNote().trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Note cannot be empty"));
+        }
+        traineeService.sendNoteToCoach(principal.getUsername(), request.getNote());
+        return ResponseEntity.ok(ApiResponse.ok("Note sent to coach", null));
     }
 
     /** POST /api/trainees/me/progress-photos – trainee uploads their own progress photo */

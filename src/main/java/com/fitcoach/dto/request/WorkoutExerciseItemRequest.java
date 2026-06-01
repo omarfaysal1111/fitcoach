@@ -9,7 +9,7 @@ import lombok.Data;
 @Data
 public class WorkoutExerciseItemRequest {
     private Long exerciseId;
-    /** Optional: WARM_UP, MAIN, COOL_DOWN */
+    /** Optional: WARM_UP, MAIN, CARDIO */
     private String sectionType;
     private int order;
     private int sets;

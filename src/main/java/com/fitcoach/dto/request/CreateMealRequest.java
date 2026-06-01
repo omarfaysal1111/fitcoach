@@ -8,4 +8,7 @@ public class CreateMealRequest {
     private String name;
     private List<Long> ingredientIds;
     private Double customCalories;
+    private Double customProtein;
+    private Double customCarbs;
+    private Double customFat;
 }

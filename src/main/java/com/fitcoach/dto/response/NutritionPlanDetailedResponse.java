@@ -12,4 +12,5 @@ public class NutritionPlanDetailedResponse {
     private String description;
     private String type;
     private List<MealDetailedResponse> meals;
+    private Double waterTargetLiters;
 }
