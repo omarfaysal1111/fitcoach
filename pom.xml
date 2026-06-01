@@ -24,6 +24,7 @@
         <java.version>17</java.version>
         <jjwt.version>0.12.5</jjwt.version>
         <lombok.version>1.18.38</lombok.version>
+        <aws.sdk.version>2.25.27</aws.sdk.version>
     </properties>
 
     <dependencies>
@@ -84,6 +85,18 @@
             <groupId>com.google.api-client</groupId>
             <artifactId>google-api-client</artifactId>
             <version>2.7.0</version>
+        </dependency>
+
+        <!-- AWS SDK v2 — S3 file storage -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sts</artifactId>
+            <version>${aws.sdk.version}</version>
         </dependency>
 
         <!-- Firebase Admin SDK (FCM push notifications) -->
