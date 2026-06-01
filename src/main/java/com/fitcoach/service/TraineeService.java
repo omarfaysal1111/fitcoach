@@ -216,18 +216,46 @@ public class TraineeService {
                     .build();
         }
 
-        double todayWaterLiters = traineeWaterIntakeRepository
-                .findByTraineeIdAndIntakeDate(trainee.getId(), today)
-                .map(w -> w.getLiters() != null ? w.getLiters() : 0.0)
-                .orElse(0.0);
+        // Weekly window: Mon–Sun of the current week
+        java.time.LocalDate weekStart = today.with(java.time.DayOfWeek.MONDAY);
+        java.time.LocalDate weekEnd = today.with(java.time.DayOfWeek.SUNDAY);
+
+        // Workouts completed this week: count distinct days with at least one session done
+        var weeklyWorkoutCompletions = traineeWorkoutCompletionRepository
+                .findByTrainee_IdAndCompletionDateBetween(trainee.getId(), weekStart, weekEnd);
+        int workoutsCompleted = (int) weeklyWorkoutCompletions.stream()
+                .map(TraineeWorkoutCompletion::getCompletionDate)
+                .distinct()
+                .count();
+        int workoutsTarget = todayWorkoutPlan != null ? todayWorkoutPlan.getSessions().size() : 0;
+
+        // Meals logged this week
+        var weeklyMealCompletions = traineeMealCompletionRepository
+                .findByTraineeIdAndCompletionDateBetween(trainee.getId(), weekStart, weekEnd);
+        int mealsLogged = weeklyMealCompletions.size();
+        int mealsPerDay = todayNutritionPlan != null ? todayNutritionPlan.getMeals().size() : 0;
+        int mealsTarget = mealsPerDay * 7;
+
+        // Water this week
+        double weekWaterLiters = traineeWaterIntakeRepository
+                .findByTraineeIdAndIntakeDateBetween(trainee.getId(), weekStart, weekEnd)
+                .stream()
+                .mapToDouble(w -> w.getLiters() != null ? w.getLiters() : 0.0)
+                .sum();
+
+        // Water target from nutrition plan (coach-set)
+        double waterTargetLiters = (todayNutritionPlan != null
+                && todayNutritionPlan.getWaterTargetLiters() != null)
+                ? todayNutritionPlan.getWaterTargetLiters()
+                : 2.0;
 
         var weeklyGoals = TraineeDashboardTodayResponse.WeeklyGoals.builder()
-                .workoutsCompleted(0)
-                .workoutsTarget(0)
-                .mealsLogged(0)
-                .mealsTarget(0)
-                .waterLiters(todayWaterLiters)
-                .waterTargetLiters(0.0)
+                .workoutsCompleted(workoutsCompleted)
+                .workoutsTarget(workoutsTarget)
+                .mealsLogged(mealsLogged)
+                .mealsTarget(mealsTarget)
+                .waterLiters(weekWaterLiters)
+                .waterTargetLiters(waterTargetLiters)
                 .weightStart(0.0)
                 .weightCurrent(0.0)
                 .weightTarget(0.0)
@@ -306,6 +334,7 @@ public class TraineeService {
                         .muscleGroup(we.getExercise().getTargetedMuscle())
                         .status("not_started")
                         .videoUrl(we.getExercise().getVideoLink())
+                        .sectionType(we.getSectionType() != null ? we.getSectionType().name() : "MAIN")
                         .build());
             }
         }
@@ -564,6 +593,23 @@ public class TraineeService {
         return new int[]{0, STREAK_BADGE_NAMES.length - 1};
     }
 
+    @Transactional
+    public void sendNoteToCoach(String email, String note) {
+        Trainee trainee = getTraineeByEmail(email);
+        String trimmed = note == null ? "" : note.trim();
+        trainee.setTraineeNoteToCoach(trimmed);
+        traineeRepository.save(trainee);
+
+        // Notify the coach
+        String coachFcmToken = trainee.getCoach().getUser().getFcmToken();
+        String traineeName = trainee.getUser().getFullName();
+        notificationService.sendToToken(
+                coachFcmToken,
+                "Note from " + traineeName,
+                trimmed.length() > 120 ? trimmed.substring(0, 120) + "…" : trimmed
+        );
+    }
+
     public Trainee getTraineeByEmail(String email) {
         var user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -605,6 +651,7 @@ public class TraineeService {
                 .coachName(coach.getUser().getFullName())
                 .coachFeedback(trainee.getCoachFeedback())
                 .cautionNotes(trainee.getCautionNotes())
+                .traineeNoteToCoach(trainee.getTraineeNoteToCoach())
                 .currentStreak(currentStreak)
                 .createdAt(trainee.getCreatedAt())
                 .height(trainee.getHeight())

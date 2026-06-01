@@ -50,6 +50,10 @@ public class NutritionPlan {
     @Builder.Default
     private List<Meal> meals = new ArrayList<>();
 
+    /** Daily water intake target in liters, set by the coach. */
+    @Column(name = "water_target_liters")
+    private Double waterTargetLiters;
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;

@@ -51,5 +51,6 @@ public class TraineeExercisePlanDetailResponse {
         private String muscleGroup;
         private String status; // not_started | in_progress | done
         private String videoUrl;
+        private String sectionType;
     }
 }

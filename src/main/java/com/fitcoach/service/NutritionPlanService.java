@@ -35,25 +35,38 @@ public class NutritionPlanService {
                 .description(request.getDescription())
                 .coach(coach)
                 .trainees(trainees)
+                .waterTargetLiters(request.getWaterTargetLiters())
                 .build();
 
         if (request.getMeals() != null) {
             for (CreateMealRequest mealRequest : request.getMeals()) {
                 Set<Ingredient> ingredients = new HashSet<>();
                 double totalCalories = 0.0;
+                double totalProtein = 0.0;
+                double totalCarbs = 0.0;
+                double totalFat = 0.0;
+
                 if (mealRequest.getIngredientIds() != null && !mealRequest.getIngredientIds().isEmpty()) {
                     List<Ingredient> foundIngredients = ingredientRepository.findAllById(mealRequest.getIngredientIds());
                     ingredients.addAll(foundIngredients);
                     totalCalories = foundIngredients.stream().mapToDouble(i -> i.getCalories() != null ? i.getCalories() : 0.0).sum();
+                    totalProtein  = foundIngredients.stream().mapToDouble(i -> i.getProtein() != null ? i.getProtein() : 0.0).sum();
+                    totalCarbs    = foundIngredients.stream().mapToDouble(i -> i.getCarbohydrates() != null ? i.getCarbohydrates() : 0.0).sum();
+                    totalFat      = foundIngredients.stream().mapToDouble(i -> i.getFat() != null ? i.getFat() : 0.0).sum();
                 }
-                
-                if (mealRequest.getCustomCalories() != null) {
-                    totalCalories = mealRequest.getCustomCalories();
-                }
+
+                // Coach-provided custom values override ingredient-derived totals
+                if (mealRequest.getCustomCalories() != null) totalCalories = mealRequest.getCustomCalories();
+                if (mealRequest.getCustomProtein()  != null) totalProtein  = mealRequest.getCustomProtein();
+                if (mealRequest.getCustomCarbs()    != null) totalCarbs    = mealRequest.getCustomCarbs();
+                if (mealRequest.getCustomFat()      != null) totalFat      = mealRequest.getCustomFat();
 
                 Meal meal = Meal.builder()
                         .name(mealRequest.getName())
                         .calories(totalCalories)
+                        .protein(totalProtein)
+                        .carbs(totalCarbs)
+                        .fat(totalFat)
                         .ingredients(ingredients)
                         .nutritionPlan(plan)
                         .build();

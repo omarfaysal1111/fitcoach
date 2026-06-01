@@ -9,4 +9,5 @@ public class CreateNutritionPlanRequest {
     private String description;
     private List<Long> traineeIds;
     private List<CreateMealRequest> meals;
+    private Double waterTargetLiters;
 }
