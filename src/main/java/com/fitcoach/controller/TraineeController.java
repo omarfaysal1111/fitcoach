@@ -183,13 +183,20 @@ public ResponseEntity<ApiResponse<List<NutritionPlanDetailedResponse>>> getMyNut
                     .description(p.getDescription())
                     .type("NUTRITION")
                     .meals(p.getMeals().stream()
-                            .map(meal -> MealDetailedResponse.builder()
+                            .map(meal -> {
+                                List<com.fitcoach.domain.entity.Ingredient> ingList =
+                                        new java.util.ArrayList<>(meal.getIngredients());
+                                double sumCalories = ingList.stream().mapToDouble(i -> i.getCalories() != null ? i.getCalories() : 0.0).sum();
+                                double sumProtein  = ingList.stream().mapToDouble(i -> i.getProtein() != null ? i.getProtein() : 0.0).sum();
+                                double sumCarbs    = ingList.stream().mapToDouble(i -> i.getCarbohydrates() != null ? i.getCarbohydrates() : 0.0).sum();
+                                double sumFat      = ingList.stream().mapToDouble(i -> i.getFat() != null ? i.getFat() : 0.0).sum();
+                                return MealDetailedResponse.builder()
                                     .id(String.valueOf(meal.getId()))
                                     .name(meal.getName())
-                                    .calories(meal.getCalories())
-                                    .protein(meal.getProtein())
-                                    .carbs(meal.getCarbs())
-                                    .fat(meal.getFat())
+                                    .calories(meal.getCalories() != null ? meal.getCalories() : sumCalories)
+                                    .protein(meal.getProtein()  != null ? meal.getProtein()  : sumProtein)
+                                    .carbs(meal.getCarbs()      != null ? meal.getCarbs()     : sumCarbs)
+                                    .fat(meal.getFat()          != null ? meal.getFat()       : sumFat)
                                     .ingredients(meal.getIngredients().stream()
                                             .map(ingredient -> IngredientResponse.builder()
                                                     .id(ingredient.getId())
@@ -203,7 +210,8 @@ public ResponseEntity<ApiResponse<List<NutritionPlanDetailedResponse>>> getMyNut
                                                     .totalMinerals(ingredient.getTotalMinerals())
                                                     .build())
                                             .toList())
-                                    .build())
+                                    .build();
+                            })
                             .toList())
                     .build()))
             .orElseGet(List::of);
