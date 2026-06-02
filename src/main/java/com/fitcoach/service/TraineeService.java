@@ -176,10 +176,14 @@ public class TraineeService {
 
             for (Meal meal : todayNutritionPlan.getMeals()) {
                 boolean completed = completedMealIds.contains(meal.getId());
-                int cal = meal.getCalories() != null ? meal.getCalories().intValue() : 0;
-                int pro = meal.getProtein() != null ? meal.getProtein().intValue() : 0;
-                int car = meal.getCarbs() != null ? meal.getCarbs().intValue() : 0;
-                int fat = meal.getFat() != null ? meal.getFat().intValue() : 0;
+                double ingCalories = meal.getIngredients().stream().mapToDouble(i -> i.getCalories() != null ? i.getCalories() : 0.0).sum();
+                double ingProtein  = meal.getIngredients().stream().mapToDouble(i -> i.getProtein() != null ? i.getProtein() : 0.0).sum();
+                double ingCarbs    = meal.getIngredients().stream().mapToDouble(i -> i.getCarbohydrates() != null ? i.getCarbohydrates() : 0.0).sum();
+                double ingFat      = meal.getIngredients().stream().mapToDouble(i -> i.getFat() != null ? i.getFat() : 0.0).sum();
+                int cal = meal.getCalories() != null ? meal.getCalories().intValue() : (int) ingCalories;
+                int pro = meal.getProtein()  != null ? meal.getProtein().intValue()  : (int) ingProtein;
+                int car = meal.getCarbs()    != null ? meal.getCarbs().intValue()    : (int) ingCarbs;
+                int fat = meal.getFat()      != null ? meal.getFat().intValue()      : (int) ingFat;
 
                 caloriesTarget += cal;
                 proteinTarget += pro;
