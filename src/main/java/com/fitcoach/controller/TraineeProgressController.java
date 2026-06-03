@@ -5,9 +5,11 @@ import com.fitcoach.dto.request.CreateMeasurementLogRequest;
 import com.fitcoach.dto.request.CreateProgressPictureRequest;
 import com.fitcoach.dto.response.ApiResponse;
 import com.fitcoach.dto.response.MeasurementLogResponse;
+import com.fitcoach.dto.response.ProgressPhotoResponse;
 import com.fitcoach.dto.response.ProgressPictureResponse;
 import com.fitcoach.service.ExerciseLogService;
 import com.fitcoach.service.MeasurementService;
+import com.fitcoach.service.ProgressPhotoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -27,6 +29,7 @@ public class TraineeProgressController {
 
     private final ExerciseLogService exerciseLogService;
     private final MeasurementService measurementService;
+    private final ProgressPhotoService progressPhotoService;
 
     /**
      * POST /api/trainees/me/plan-sessions/{planSessionId}/complete-with-logs
@@ -85,12 +88,35 @@ public class TraineeProgressController {
 
     /**
      * GET /api/trainees/me/progress-pictures
-     * Get all progress pictures for the authenticated trainee, newest first.
+     * Reads from progress_photos (S3-based uploads), groups by date, maps label→slot.
      */
     @GetMapping("/me/progress-pictures")
     public ResponseEntity<ApiResponse<List<ProgressPictureResponse>>> getMyProgressPictures(
             @AuthenticationPrincipal UserDetails principal) {
-        return ResponseEntity.ok(
-                ApiResponse.ok(measurementService.getMyProgressPictures(principal.getUsername())));
+        List<ProgressPhotoResponse> photos = progressPhotoService.getMyPhotos(principal.getUsername());
+
+        // Group individual photos by photoDate, mapping label to the right URL slot
+        java.util.Map<java.time.LocalDate, ProgressPictureResponse.ProgressPictureResponseBuilder> byDate =
+                new java.util.LinkedHashMap<>();
+
+        for (ProgressPhotoResponse p : photos) {
+            java.time.LocalDate date = p.getPhotoDate() != null ? p.getPhotoDate() : java.time.LocalDate.now();
+            var builder = byDate.computeIfAbsent(date, d ->
+                    ProgressPictureResponse.builder()
+                            .id(p.getId())
+                            .date(d)
+                            .uploadedAt(p.getUploadedAt()));
+            String label = p.getLabel() != null ? p.getLabel().toLowerCase() : "front";
+            if (label.contains("side"))       builder.sidePictureUrl(p.getFileUrl());
+            else if (label.contains("back"))  builder.backPictureUrl(p.getFileUrl());
+            else                              builder.frontPictureUrl(p.getFileUrl());
+        }
+
+        List<ProgressPictureResponse> result = byDate.values().stream()
+                .map(ProgressPictureResponse.ProgressPictureResponseBuilder::build)
+                .sorted(java.util.Comparator.comparing(ProgressPictureResponse::getDate).reversed())
+                .toList();
+
+        return ResponseEntity.ok(ApiResponse.ok(result));
     }
 }
