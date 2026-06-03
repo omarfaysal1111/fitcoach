@@ -22,6 +22,7 @@ import com.fitcoach.dto.response.TraineeExercisePlanDetailResponse;
 import com.fitcoach.dto.response.TraineePlanSummaryResponse;
 import com.fitcoach.dto.response.TraineeWorkoutPlanSessionsResponse;
 import com.fitcoach.dto.response.TraineeProfileResponse;
+import com.fitcoach.dto.response.UploadItemResult;
 import com.fitcoach.dto.response.WaterIntakeResponse;
 import com.fitcoach.service.CoachPortfolioService;
 import com.fitcoach.service.ExercisePlanService;
@@ -289,10 +290,11 @@ public ResponseEntity<ApiResponse<List<NutritionPlanDetailedResponse>>> getMyNut
         return ResponseEntity.ok(ApiResponse.ok("Note sent to coach", null));
     }
 
-    /** POST /api/trainees/me/progress-photos – trainee uploads their own progress photo */
+    /** POST /api/trainees/me/progress-photos – trainee uploads one or more progress photos */
     @PostMapping(value = "/me/progress-photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<ProgressPhotoResponse>> uploadMyProgressPhoto(
+    public ResponseEntity<ApiResponse<List<UploadItemResult<ProgressPhotoResponse>>>> uploadMyProgressPhoto(
             @AuthenticationPrincipal UserDetails principal,
+            @RequestParam(value = "files", required = false) List<MultipartFile> files,
             @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "photo", required = false) MultipartFile photo,
             @RequestParam(value = "image", required = false) MultipartFile image,
@@ -300,11 +302,22 @@ public ResponseEntity<ApiResponse<List<NutritionPlanDetailedResponse>>> getMyNut
             @RequestParam(value = "label", required = false) String label,
             @RequestParam(value = "photoDate", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate photoDate) {
-        MultipartFile uploadedFile = firstProvidedFile(file, photo, image, picture);
-        ProgressPhotoResponse response =
-                progressPhotoService.uploadPhotoByTrainee(principal.getUsername(), uploadedFile, label, photoDate);
+        List<MultipartFile> toProcess = resolveFiles(files, file, photo, image, picture);
+        List<UploadItemResult<ProgressPhotoResponse>> results = toProcess.stream()
+                .map(f -> {
+                    try {
+                        ProgressPhotoResponse r = progressPhotoService.uploadPhotoByTrainee(
+                                principal.getUsername(), f, label, photoDate);
+                        return UploadItemResult.<ProgressPhotoResponse>builder()
+                                .fileName(f.getOriginalFilename()).success(true).data(r).build();
+                    } catch (Exception ex) {
+                        return UploadItemResult.<ProgressPhotoResponse>builder()
+                                .fileName(f.getOriginalFilename()).success(false).error(ex.getMessage()).build();
+                    }
+                })
+                .toList();
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok("Progress photo uploaded", response));
+                .body(ApiResponse.ok("Progress photos processed", results));
     }
 
     /** GET /api/trainees/me/progress-photos – trainee lists their own progress photos */
@@ -319,8 +332,9 @@ public ResponseEntity<ApiResponse<List<NutritionPlanDetailedResponse>>> getMyNut
      * Older clients use /progress-pictures while uploading files.
      */
     @PostMapping(value = "/me/progress-pictures", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<ProgressPhotoResponse>> uploadMyProgressPictureCompat(
+    public ResponseEntity<ApiResponse<List<UploadItemResult<ProgressPhotoResponse>>>> uploadMyProgressPictureCompat(
             @AuthenticationPrincipal UserDetails principal,
+            @RequestParam(value = "files", required = false) List<MultipartFile> files,
             @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "photo", required = false) MultipartFile photo,
             @RequestParam(value = "image", required = false) MultipartFile image,
@@ -328,11 +342,22 @@ public ResponseEntity<ApiResponse<List<NutritionPlanDetailedResponse>>> getMyNut
             @RequestParam(value = "label", required = false) String label,
             @RequestParam(value = "photoDate", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate photoDate) {
-        MultipartFile uploadedFile = firstProvidedFile(file, photo, image, picture);
-        ProgressPhotoResponse response =
-                progressPhotoService.uploadPhotoByTrainee(principal.getUsername(), uploadedFile, label, photoDate);
+        List<MultipartFile> toProcess = resolveFiles(files, file, photo, image, picture);
+        List<UploadItemResult<ProgressPhotoResponse>> results = toProcess.stream()
+                .map(f -> {
+                    try {
+                        ProgressPhotoResponse r = progressPhotoService.uploadPhotoByTrainee(
+                                principal.getUsername(), f, label, photoDate);
+                        return UploadItemResult.<ProgressPhotoResponse>builder()
+                                .fileName(f.getOriginalFilename()).success(true).data(r).build();
+                    } catch (Exception ex) {
+                        return UploadItemResult.<ProgressPhotoResponse>builder()
+                                .fileName(f.getOriginalFilename()).success(false).error(ex.getMessage()).build();
+                    }
+                })
+                .toList();
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok("Progress photo uploaded", response));
+                .body(ApiResponse.ok("Progress photos processed", results));
     }
 
     /** DELETE /api/trainees/me/progress-photos/{id} – trainee deletes their own progress photo */
@@ -344,10 +369,11 @@ public ResponseEntity<ApiResponse<List<NutritionPlanDetailedResponse>>> getMyNut
         return ResponseEntity.ok(ApiResponse.ok("Progress photo deleted", null));
     }
 
-    /** POST /api/trainees/me/inbody-reports – trainee uploads their own InBody report */
+    /** POST /api/trainees/me/inbody-reports – trainee uploads one or more InBody reports */
     @PostMapping(value = "/me/inbody-reports", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<InBodyReportResponse>> uploadMyInBodyReport(
+    public ResponseEntity<ApiResponse<List<UploadItemResult<InBodyReportResponse>>>> uploadMyInBodyReport(
             @AuthenticationPrincipal UserDetails principal,
+            @RequestParam(value = "files", required = false) List<MultipartFile> files,
             @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "photo", required = false) MultipartFile photo,
             @RequestParam(value = "image", required = false) MultipartFile image,
@@ -355,11 +381,22 @@ public ResponseEntity<ApiResponse<List<NutritionPlanDetailedResponse>>> getMyNut
             @RequestParam(value = "label", required = false) String label,
             @RequestParam(value = "reportDate", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate reportDate) {
-        MultipartFile uploadedFile = firstProvidedFile(file, photo, image, picture);
-        InBodyReportResponse response =
-                inBodyReportService.uploadReportByTrainee(principal.getUsername(), uploadedFile, label, reportDate);
+        List<MultipartFile> toProcess = resolveFiles(files, file, photo, image, picture);
+        List<UploadItemResult<InBodyReportResponse>> results = toProcess.stream()
+                .map(f -> {
+                    try {
+                        InBodyReportResponse r = inBodyReportService.uploadReportByTrainee(
+                                principal.getUsername(), f, label, reportDate);
+                        return UploadItemResult.<InBodyReportResponse>builder()
+                                .fileName(f.getOriginalFilename()).success(true).data(r).build();
+                    } catch (Exception ex) {
+                        return UploadItemResult.<InBodyReportResponse>builder()
+                                .fileName(f.getOriginalFilename()).success(false).error(ex.getMessage()).build();
+                    }
+                })
+                .toList();
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok("InBody report uploaded", response));
+                .body(ApiResponse.ok("InBody reports processed", results));
     }
 
     /** GET /api/trainees/me/inbody-reports – trainee lists their own InBody reports */
@@ -385,12 +422,15 @@ public ResponseEntity<ApiResponse<List<NutritionPlanDetailedResponse>>> getMyNut
         return ResponseEntity.ok(ApiResponse.ok("InBody report deleted", null));
     }
 
-    private MultipartFile firstProvidedFile(MultipartFile... candidates) {
-        for (MultipartFile candidate : candidates) {
+    private List<MultipartFile> resolveFiles(List<MultipartFile> files, MultipartFile... singles) {
+        if (files != null && !files.isEmpty()) {
+            return files.stream().filter(f -> f != null && !f.isEmpty()).toList();
+        }
+        for (MultipartFile candidate : singles) {
             if (candidate != null && !candidate.isEmpty()) {
-                return candidate;
+                return List.of(candidate);
             }
         }
-        throw new IllegalArgumentException("Missing file upload part. Use one of: file, photo, image, picture.");
+        throw new IllegalArgumentException("Missing file upload part. Use 'files' (multi) or one of: file, photo, image, picture.");
     }
 }
