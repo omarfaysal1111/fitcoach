@@ -9,22 +9,16 @@ import com.fitcoach.exception.ResourceNotFoundException;
 import com.fitcoach.repository.CoachRepository;
 import com.fitcoach.repository.UserRepository;
 import com.fitcoach.service.SubscriptionService;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Base64;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/superadmin")
 @RequiredArgsConstructor
 public class SuperAdminController {
-
-    private static final String ADMIN_EMAIL    = "omarfaysaladmin@admin.co";
-    private static final String ADMIN_PASSWORD = "x6-4C37M";
 
     private final UserRepository userRepository;
     private final CoachRepository coachRepository;
@@ -37,13 +31,7 @@ public class SuperAdminController {
      */
     @PostMapping("/coaches/set-plan")
     public ResponseEntity<ApiResponse<SubscriptionStatusResponse>> setCoachPlan(
-            @RequestBody Map<String, String> body,
-            HttpServletRequest request) {
-
-        if (!isAuthorized(request)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(ApiResponse.error("Invalid admin credentials"));
-        }
+            @RequestBody Map<String, String> body) {
 
         String coachEmail = body.get("coachEmail");
         String planStr    = body.get("plan");
@@ -76,17 +64,4 @@ public class SuperAdminController {
                 "Plan updated to " + plan.name() + " for " + coachEmail, status));
     }
 
-    private boolean isAuthorized(HttpServletRequest request) {
-        String header = request.getHeader("Authorization");
-        if (header == null || !header.startsWith("Basic ")) return false;
-        try {
-            String decoded = new String(Base64.getDecoder().decode(header.substring(6)));
-            String[] parts = decoded.split(":", 2);
-            return parts.length == 2
-                    && ADMIN_EMAIL.equals(parts[0])
-                    && ADMIN_PASSWORD.equals(parts[1]);
-        } catch (Exception e) {
-            return false;
-        }
-    }
 }
