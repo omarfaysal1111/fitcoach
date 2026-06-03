@@ -49,6 +49,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Let browser/Flutter preflight requests pass through
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // Super-admin endpoint — auth handled inside the controller
+                .requestMatchers("/superadmin/**").permitAll()
                 // Public auth endpoints (must come BEFORE role-scoped rules)
                 .requestMatchers(HttpMethod.POST, "/auth/coaches/register").permitAll()
                 .requestMatchers(HttpMethod.POST, "/auth/trainees/register").permitAll()
