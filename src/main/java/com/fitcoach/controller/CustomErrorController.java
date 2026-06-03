@@ -31,7 +31,10 @@ public class CustomErrorController implements ErrorController {
                 ? HttpStatus.resolve(statusCode) : HttpStatus.INTERNAL_SERVER_ERROR;
         if (status == null) status = HttpStatus.INTERNAL_SERVER_ERROR;
 
-        String body = (message != null && !message.isBlank()) ? message : "An unexpected error occurred";
+        String exClass = ex != null ? ex.getClass().getSimpleName() : "unknown";
+        String exMsg   = ex != null ? ex.getMessage() : null;
+        String body = "[DEBUG-FILTER] " + exClass + ": " + exMsg
+                + " | httpMsg: " + (message != null ? message : "none");
         return ResponseEntity.status(status).body(ApiResponse.error(body));
     }
 }
