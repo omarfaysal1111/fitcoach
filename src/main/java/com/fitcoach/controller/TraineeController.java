@@ -321,7 +321,7 @@ public ResponseEntity<ApiResponse<List<NutritionPlanDetailedResponse>>> getMyNut
     }
 
     /** GET /api/trainees/me/progress-photos – trainee lists their own progress photos */
-    @GetMapping("/me/progress-photos")
+    @GetMapping({"/me/progress-photos", "/me/progress-pictures"})
     public ResponseEntity<ApiResponse<List<ProgressPhotoResponse>>> getMyProgressPhotos(
             @AuthenticationPrincipal UserDetails principal) {
         return ResponseEntity.ok(ApiResponse.ok(progressPhotoService.getMyPhotos(principal.getUsername())));
