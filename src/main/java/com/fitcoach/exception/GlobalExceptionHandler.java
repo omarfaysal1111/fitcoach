@@ -140,13 +140,13 @@ public class GlobalExceptionHandler {
         }
         ex.printStackTrace();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("[DEBUG] " + ex.getClass().getSimpleName() + ": " + message));
+                .body(ApiResponse.error("An unexpected error occurred"));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex) {
         ex.printStackTrace();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("[DEBUG] " + ex.getClass().getSimpleName() + ": " + ex.getMessage()));
+                .body(ApiResponse.error("An unexpected error occurred"));
     }
 }
