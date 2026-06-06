@@ -100,7 +100,7 @@ public class TraineeService {
                 .avatarUrl(coach.getUser().getAvatarUrl())
                 .build();
 
-        int currentStreak = trainee.getCurrentStreak();
+        int currentStreak = computeStreak(trainee.getId());
         int[] nextBadge = nextStreakBadge(currentStreak);
         var streak = TraineeDashboardTodayResponse.Streak.builder()
                 .currentDays(currentStreak)
@@ -582,7 +582,12 @@ public class TraineeService {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    /** Count consecutive days ending today where the trainee completed at least one workout. */
+    /**
+     * Count consecutive days of workout completions.
+     * Starts from today if today has a completion, otherwise from yesterday —
+     * this keeps the streak alive until midnight even if today's workout
+     * hasn't been done yet.
+     */
     public int computeStreak(Long traineeId) {
         java.util.Set<java.time.LocalDate> completionDates =
                 traineeWorkoutCompletionRepository
@@ -591,8 +596,12 @@ public class TraineeService {
                         .map(TraineeWorkoutCompletion::getCompletionDate)
                         .collect(java.util.stream.Collectors.toSet());
 
+        java.time.LocalDate today = java.time.LocalDate.now();
+        // Allow the streak to count from yesterday if today hasn't been completed yet
+        java.time.LocalDate start = completionDates.contains(today) ? today : today.minusDays(1);
+
         int streak = 0;
-        java.time.LocalDate date = java.time.LocalDate.now();
+        java.time.LocalDate date = start;
         while (completionDates.contains(date)) {
             streak++;
             date = date.minusDays(1);
@@ -656,7 +665,7 @@ public class TraineeService {
 
     private TraineeProfileResponse toResponse(Trainee trainee) {
         var coach = trainee.getCoach();
-        int currentStreak = trainee.getCurrentStreak();
+        int currentStreak = computeStreak(trainee.getId());
         return TraineeProfileResponse.builder()
                 .id(trainee.getId())
                 .userId(trainee.getUser().getId())
