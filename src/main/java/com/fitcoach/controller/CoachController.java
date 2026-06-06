@@ -2,6 +2,8 @@ package com.fitcoach.controller;
 
 import com.fitcoach.dto.request.InvitationRequest;
 import com.fitcoach.dto.request.UpdateCoachRequest;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
 import com.fitcoach.dto.request.UpdateTraineeByCoachRequest;
 import com.fitcoach.dto.request.UpdateTraineeNotesRequest;
 import com.fitcoach.dto.response.CoachAlertResponse;
@@ -51,6 +53,15 @@ public class CoachController {
         }
         CoachHomeResponse home = coachService.getHome(principal.getUsername());
         return ResponseEntity.ok(ApiResponse.ok(home));
+    }
+
+    /** POST /api/coaches/me/avatar – upload coach profile picture */
+    @PostMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<CoachProfileResponse>> uploadAvatar(
+            @AuthenticationPrincipal UserDetails principal,
+            @RequestParam("file") MultipartFile file) {
+        if (principal == null) throw new AuthenticationCredentialsNotFoundException("Unauthenticated");
+        return ResponseEntity.ok(ApiResponse.ok("Avatar uploaded", coachService.uploadAvatar(principal.getUsername(), file)));
     }
 
     /** PUT /api/coaches/me – update profile */

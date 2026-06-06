@@ -73,6 +73,10 @@ public class User {
     @Column(length = 512)
     private String fcmToken;
 
+    /** S3 URL of the user's profile picture. Null until the user uploads one. */
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;

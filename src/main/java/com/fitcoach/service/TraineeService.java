@@ -18,6 +18,7 @@ import com.fitcoach.dto.request.IngredientSwapRequest;
 import com.fitcoach.dto.request.MealCompletionRequest;
 import com.fitcoach.dto.request.TraineeOnboardingRequest;
 import com.fitcoach.dto.request.UpdateTraineeRequest;
+import org.springframework.web.multipart.MultipartFile;
 import com.fitcoach.dto.response.ExtraMealLogResponse;
 import com.fitcoach.dto.response.CoachProfileResponse;
 import com.fitcoach.dto.response.TraineeDashboardTodayResponse;
@@ -67,6 +68,7 @@ public class TraineeService {
     private final CoachGoalRepository coachGoalRepository;
     private final TraineeWaterIntakeRepository traineeWaterIntakeRepository;
     private final FirebaseNotificationService notificationService;
+    private final FileStorageService fileStorageService;
 
     private static final int[] STREAK_BADGE_THRESHOLDS = {7, 14, 30, 60, 100, 180, 365};
     private static final String[] STREAK_BADGE_NAMES = {
@@ -89,12 +91,13 @@ public class TraineeService {
                 .id(trainee.getId())
                 .fullName(trainee.getUser().getFullName())
                 .fitnessGoal(trainee.getFitnessGoal())
-                .avatarUrl(null)
+                .avatarUrl(trainee.getUser().getAvatarUrl())
                 .build();
 
         var coachSummary = TraineeDashboardTodayResponse.CoachSummary.builder()
                 .id(coach.getId())
                 .fullName(coach.getUser().getFullName())
+                .avatarUrl(coach.getUser().getAvatarUrl())
                 .build();
 
         int currentStreak = trainee.getCurrentStreak();
@@ -522,6 +525,7 @@ public class TraineeService {
                 .bio(coach.getBio())
                 .traineeCount(coach.getTrainees().size())
                 .createdAt(coach.getCreatedAt())
+                .avatarUrl(coach.getUser().getAvatarUrl())
                 .build();
     }
 
@@ -565,6 +569,15 @@ public class TraineeService {
                 .mealDate(log.getMealDate())
                 .loggedAt(log.getLoggedAt())
                 .build();
+    }
+
+    @Transactional
+    public TraineeProfileResponse uploadAvatar(String email, MultipartFile file) {
+        Trainee trainee = getTraineeByEmail(email);
+        String url = fileStorageService.store(file, "avatars/trainees/" + trainee.getUser().getId());
+        trainee.getUser().setAvatarUrl(url);
+        userRepository.save(trainee.getUser());
+        return toResponse(trainee);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -665,6 +678,7 @@ public class TraineeService {
                 .healthHistory(trainee.getHealthHistory())
                 .medications(trainee.getMedications())
                 .onboardingComplete(trainee.isOnboardingComplete())
+                .avatarUrl(trainee.getUser().getAvatarUrl())
                 .build();
     }
 }

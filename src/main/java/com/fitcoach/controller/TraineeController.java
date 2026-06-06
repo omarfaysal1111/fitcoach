@@ -140,7 +140,16 @@ public class TraineeController {
         
         String message = request.isSkipMeal() ? "Meal skipped successfully" : "Meal logged successfully";
         return ResponseEntity.ok(ApiResponse.ok(message));
-    }    /** PUT /api/trainees/me – update profile */
+    }    /** POST /api/trainees/me/avatar – upload trainee profile picture */
+    @PostMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<TraineeProfileResponse>> uploadAvatar(
+            @AuthenticationPrincipal UserDetails principal,
+            @RequestParam("file") MultipartFile file) {
+        if (principal == null) throw new AuthenticationCredentialsNotFoundException("Unauthenticated");
+        return ResponseEntity.ok(ApiResponse.ok("Avatar uploaded", traineeService.uploadAvatar(principal.getUsername(), file)));
+    }
+
+    /** PUT /api/trainees/me – update profile */
     @PutMapping("/me")
     public ResponseEntity<ApiResponse<TraineeProfileResponse>> updateMyProfile(
             @AuthenticationPrincipal UserDetails principal,

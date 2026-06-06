@@ -33,6 +33,7 @@ public class TraineeDashboardTodayResponse {
     public static class CoachSummary {
         private Long id;
         private String fullName;
+        private String avatarUrl;
     }
 
     @Data

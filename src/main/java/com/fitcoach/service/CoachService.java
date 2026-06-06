@@ -35,6 +35,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -67,6 +68,7 @@ public class CoachService {
     private final InBodyReportService inBodyReportService;
     private final ProgressPhotoService progressPhotoService;
     private final TraineeService traineeService;
+    private final FileStorageService fileStorageService;
 
     @Transactional(readOnly = true)
     public CoachProfileResponse getMyProfile(String email) {
@@ -501,6 +503,15 @@ public class CoachService {
                 .orElseThrow(() -> new ResourceNotFoundException("Coach profile not found"));
     }
 
+    @Transactional
+    public CoachProfileResponse uploadAvatar(String email, MultipartFile file) {
+        Coach coach = findCoachByEmail(email);
+        String url = fileStorageService.store(file, "avatars/coaches/" + coach.getUser().getId());
+        coach.getUser().setAvatarUrl(url);
+        userRepository.save(coach.getUser());
+        return toResponse(coach);
+    }
+
     private CoachProfileResponse toResponse(Coach coach) {
         return CoachProfileResponse.builder()
                 .id(coach.getId())
@@ -511,6 +522,7 @@ public class CoachService {
                 .bio(coach.getBio())
                 .traineeCount(coach.getTrainees().size())
                 .createdAt(coach.getCreatedAt())
+                .avatarUrl(coach.getUser().getAvatarUrl())
                 .build();
     }
 
@@ -630,6 +642,7 @@ public class CoachService {
                 .coachFeedback(trainee.getCoachFeedback())
                 .cautionNotes(trainee.getCautionNotes())
                 .currentStreak(trainee.getCurrentStreak())
+                .avatarUrl(trainee.getUser().getAvatarUrl())
                 .build();
     }
 

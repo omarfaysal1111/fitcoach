@@ -32,6 +32,8 @@ public class TraineeProfileResponse {
     private String traineeNoteToCoach;
     private int currentStreak;
 
+    private String avatarUrl;
+
     // onboarding fields
     private Double height;
     private Double weight;

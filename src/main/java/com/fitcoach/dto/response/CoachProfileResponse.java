@@ -16,4 +16,5 @@ public class CoachProfileResponse {
     private String bio;
     private int traineeCount;
     private LocalDateTime createdAt;
+    private String avatarUrl;
 }
