@@ -655,10 +655,15 @@ public class TraineeService {
         if (req.getWeight() != null)        trainee.setWeight(req.getWeight());
         if (req.getDateOfBirth() != null)   trainee.setDateOfBirth(req.getDateOfBirth());
         if (req.getGender() != null)        trainee.setGender(req.getGender());
-        if (req.getHealthHistory() != null) trainee.setHealthHistory(req.getHealthHistory());
-        if (req.getMedications() != null)   trainee.setMedications(req.getMedications());
-        if (req.getFitnessGoal() != null)   trainee.setFitnessGoal(req.getFitnessGoal());
-        if (req.getTraineeLevel() != null)  trainee.setTraineeLevel(req.getTraineeLevel());
+        if (req.getHealthHistory() != null)     trainee.setHealthHistory(req.getHealthHistory());
+        if (req.getMedications() != null)       trainee.setMedications(req.getMedications());
+        if (req.getFitnessGoal() != null)       trainee.setFitnessGoal(req.getFitnessGoal());
+        if (req.getTraineeLevel() != null)      trainee.setTraineeLevel(req.getTraineeLevel());
+        if (req.getDietaryPreferences() != null) trainee.setDietaryPreferences(req.getDietaryPreferences());
+        if (req.getInjuries() != null)          trainee.setInjuries(req.getInjuries());
+        if (req.getSleepHours() != null)        trainee.setSleepHours(req.getSleepHours());
+        if (req.getMedicalConditions() != null) trainee.setMedicalConditions(req.getMedicalConditions());
+        if (req.getAdditionalNotes() != null)   trainee.setAdditionalNotes(req.getAdditionalNotes());
         trainee.setOnboardingComplete(true);
         return toResponse(traineeRepository.save(trainee));
     }
@@ -688,6 +693,11 @@ public class TraineeService {
                 .medications(trainee.getMedications())
                 .onboardingComplete(trainee.isOnboardingComplete())
                 .avatarUrl(trainee.getUser().getAvatarUrl())
+                .dietaryPreferences(trainee.getDietaryPreferences())
+                .injuries(trainee.getInjuries())
+                .sleepHours(trainee.getSleepHours())
+                .medicalConditions(trainee.getMedicalConditions())
+                .additionalNotes(trainee.getAdditionalNotes())
                 .build();
     }
 }

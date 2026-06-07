@@ -42,4 +42,11 @@ public class TraineeProfileResponse {
     private String healthHistory;
     private String medications;
     private boolean onboardingComplete;
+
+    // extended onboarding fields
+    private String dietaryPreferences;
+    private String injuries;
+    private String sleepHours;
+    private String medicalConditions;
+    private String additionalNotes;
 }

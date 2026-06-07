@@ -50,4 +50,23 @@ public class TraineeOnboardingRequest {
 
     /** Current medications or "none". */
     private String medications;
+
+    // ── Extended onboarding fields ────────────────────────────────────────────
+
+    /** e.g. "no_restrictions" | "halal" | "vegetarian" | "keto" */
+    @Size(max = 50)
+    private String dietaryPreferences;
+
+    /** Specific injuries described by the trainee. */
+    private String injuries;
+
+    /** e.g. "under_5h" | "5_6h" | "7_8h" | "9plus" */
+    @Size(max = 20)
+    private String sleepHours;
+
+    /** Medical conditions (diabetes, hypertension, etc.) */
+    private String medicalConditions;
+
+    /** Any additional notes for the coach. */
+    private String additionalNotes;
 }

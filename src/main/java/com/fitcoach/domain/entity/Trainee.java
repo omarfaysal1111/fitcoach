@@ -84,6 +84,28 @@ public class Trainee {
     @Column(columnDefinition = "TEXT")
     private String medications;
 
+    // ── Extended onboarding fields ────────────────────────────────────────────
+
+    /** e.g. "no_restrictions" | "halal" | "vegetarian" | "keto" */
+    @Column(name = "dietary_preferences", length = 50)
+    private String dietaryPreferences;
+
+    /** Injuries described by the trainee. */
+    @Column(name = "injuries", columnDefinition = "TEXT")
+    private String injuries;
+
+    /** e.g. "under_5h" | "5_6h" | "7_8h" | "9plus" */
+    @Column(name = "sleep_hours", length = 20)
+    private String sleepHours;
+
+    /** Medical conditions (diabetes, hypertension, etc.) */
+    @Column(name = "medical_conditions", columnDefinition = "TEXT")
+    private String medicalConditions;
+
+    /** Additional notes for the coach from the trainee. */
+    @Column(name = "additional_notes", columnDefinition = "TEXT")
+    private String additionalNotes;
+
     /** True once the trainee completes the onboarding form in-app. */
     @Column(name = "onboarding_complete", nullable = false)
     @Builder.Default

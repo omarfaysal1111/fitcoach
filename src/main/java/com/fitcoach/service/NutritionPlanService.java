@@ -28,7 +28,8 @@ public class NutritionPlanService {
         Coach coach = coachRepository.findById(coachId)
                 .orElseThrow(() -> new ResourceNotFoundException("Coach not found"));
 
-        List<Trainee> trainees = traineeRepository.findAllById(request.getTraineeIds());
+        List<Long> traineeIds = request.getTraineeIds() != null ? request.getTraineeIds() : List.of();
+        List<Trainee> trainees = traineeRepository.findAllById(traineeIds);
 
         NutritionPlan plan = NutritionPlan.builder()
                 .title(request.getTitle())
