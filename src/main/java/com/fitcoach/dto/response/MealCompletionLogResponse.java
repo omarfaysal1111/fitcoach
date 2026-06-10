@@ -31,6 +31,18 @@ public class MealCompletionLogResponse {
     /** Per-ingredient deviation detail; empty when the meal was eaten as-is or fully skipped. */
     private List<IngredientDeviationItem> ingredientDeviations;
 
+    /** Planned ingredients from the meal's nutrition plan, with per-100g calorie data. */
+    private List<PlannedIngredientItem> plannedIngredients;
+
+    @Data
+    @Builder
+    public static class PlannedIngredientItem {
+        private Long id;
+        private String name;
+        /** Energy in kcal per 100 g (null when not available in USDA data). */
+        private Double caloriesPer100g;
+    }
+
     @Data
     @Builder
     public static class IngredientDeviationItem {

@@ -88,28 +88,37 @@ public class TraineeProgressController {
 
     /**
      * GET /api/trainees/me/progress-pictures
-     * Reads from progress_photos (S3-based uploads), groups by date, maps label→slot.
+     * Merges file-uploaded photos (progress_photos) and URL-based pictures (progress_pictures),
+     * groups by date, and maps label→slot. Newest date first.
      */
     @GetMapping("/me/progress-pictures")
     public ResponseEntity<ApiResponse<List<ProgressPictureResponse>>> getMyProgressPictures(
             @AuthenticationPrincipal UserDetails principal) {
-        List<ProgressPhotoResponse> photos = progressPhotoService.getMyPhotos(principal.getUsername());
+        String email = principal.getUsername();
 
-        // Group individual photos by photoDate, mapping label to the right URL slot
+        // Group file-uploaded photos by date, mapping label → front/side/back slot
         java.util.Map<java.time.LocalDate, ProgressPictureResponse.ProgressPictureResponseBuilder> byDate =
                 new java.util.LinkedHashMap<>();
 
-        for (ProgressPhotoResponse p : photos) {
+        for (ProgressPhotoResponse p : progressPhotoService.getMyPhotos(email)) {
             java.time.LocalDate date = p.getPhotoDate() != null ? p.getPhotoDate() : java.time.LocalDate.now();
             var builder = byDate.computeIfAbsent(date, d ->
-                    ProgressPictureResponse.builder()
-                            .id(p.getId())
-                            .date(d)
-                            .uploadedAt(p.getUploadedAt()));
+                    ProgressPictureResponse.builder().id(p.getId()).date(d).uploadedAt(p.getUploadedAt()));
             String label = p.getLabel() != null ? p.getLabel().toLowerCase() : "front";
             if (label.contains("side"))       builder.sidePictureUrl(p.getFileUrl());
             else if (label.contains("back"))  builder.backPictureUrl(p.getFileUrl());
             else                              builder.frontPictureUrl(p.getFileUrl());
+        }
+
+        // Merge URL-based pictures (progress_pictures table) — fill empty slots per date
+        for (ProgressPictureResponse pic : measurementService.getMyProgressPictures(email)) {
+            java.time.LocalDate date = pic.getDate() != null ? pic.getDate() : java.time.LocalDate.now();
+            var builder = byDate.computeIfAbsent(date, d ->
+                    ProgressPictureResponse.builder().id(pic.getId()).date(d).uploadedAt(pic.getUploadedAt()));
+            if (pic.getFrontPictureUrl() != null) builder.frontPictureUrl(pic.getFrontPictureUrl());
+            if (pic.getSidePictureUrl()  != null) builder.sidePictureUrl(pic.getSidePictureUrl());
+            if (pic.getBackPictureUrl()  != null) builder.backPictureUrl(pic.getBackPictureUrl());
+            if (pic.getNotes() != null)           builder.notes(pic.getNotes());
         }
 
         List<ProgressPictureResponse> result = byDate.values().stream()

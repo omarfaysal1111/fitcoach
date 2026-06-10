@@ -50,15 +50,17 @@ public class InvitationService {
         // Enforce subscription client limit before issuing new invitation
         subscriptionService.assertCanInvite(coach);
 
+        String inviteeEmail = request.getEmail().toLowerCase();
+
         if (invitationRepository.existsByInviteeEmailAndCoachIdAndStatus(
-                request.getEmail(), coach.getId(), InvitationStatus.PENDING)) {
+                inviteeEmail, coach.getId(), InvitationStatus.PENDING)) {
             throw new ConflictException(
-                    "A pending invitation already exists for: " + request.getEmail());
+                    "A pending invitation already exists for: " + inviteeEmail);
         }
 
         Invitation invitation = Invitation.builder()
                 .coach(coach)
-                .inviteeEmail(request.getEmail())
+                .inviteeEmail(inviteeEmail)
                 .expiresAt(LocalDateTime.now().plusDays(expiryDays))
                 .build();
 

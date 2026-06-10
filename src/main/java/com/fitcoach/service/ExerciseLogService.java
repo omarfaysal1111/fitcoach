@@ -145,16 +145,25 @@ public class ExerciseLogService {
             LocalDateTime now) {
 
         int planned = pse.getSets();
-        if (outcomes.size() != planned) {
+        if (outcomes.size() > planned) {
             throw new IllegalArgumentException(
                     "planSessionExercise " + pse.getId() + " has " + planned
                             + " prescribed sets but " + outcomes.size() + " set outcomes were sent.");
         }
 
+        // Pad remaining sets with MISSED when the workout was ended early
+        List<ExerciseSetLogRequest> effective = new ArrayList<>(outcomes);
+        for (int i = outcomes.size(); i < planned; i++) {
+            ExerciseSetLogRequest padding = new ExerciseSetLogRequest();
+            padding.setOutcome(SetLogOutcome.MISSED);
+            padding.setReason("Workout ended early");
+            effective.add(padding);
+        }
+
         int completed = 0;
         int skipped = 0;
         int missed = 0;
-        for (ExerciseSetLogRequest o : outcomes) {
+        for (ExerciseSetLogRequest o : effective) {
             switch (o.getOutcome()) {
                 case COMPLETED -> completed++;
                 case SKIPPED -> skipped++;
@@ -173,8 +182,8 @@ public class ExerciseLogService {
                 .loggedAt(now)
                 .build();
 
-        for (int i = 0; i < outcomes.size(); i++) {
-            ExerciseSetLogRequest req = outcomes.get(i);
+        for (int i = 0; i < effective.size(); i++) {
+            ExerciseSetLogRequest req = effective.get(i);
             String reason = req.getReason() != null && !req.getReason().isBlank() ? req.getReason().trim() : null;
             TraineeExerciseSetLog row = TraineeExerciseSetLog.builder()
                     .exerciseLog(exerciseLog)

@@ -47,13 +47,14 @@ public class AuthService {
     // ── Coach Registration ────────────────────────────────────────────────────
     @Transactional
     public AuthResponse registerCoach(RegisterCoachRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new ConflictException("Email is already in use: " + request.getEmail());
+        String email = request.getEmail().toLowerCase();
+        if (userRepository.existsByEmail(email)) {
+            throw new ConflictException("Email is already in use: " + email);
         }
 
         User user = User.builder()
                 .fullName(request.getFullName())
-                .email(request.getEmail())
+                .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.COACH)
                 .build();
@@ -79,16 +80,17 @@ public class AuthService {
     // ── Trainee Registration (invitation required) ───────────────────────────
     @Transactional
     public AuthResponse registerTrainee(RegisterTraineeRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new ConflictException("Email is already in use: " + request.getEmail());
+        String email = request.getEmail().toLowerCase();
+        if (userRepository.existsByEmail(email)) {
+            throw new ConflictException("Email is already in use: " + email);
         }
 
         // Validate and consume invitation
-        Coach coach = invitationService.consumeInvitation(request.getInvitationToken(), request.getEmail());
+        Coach coach = invitationService.consumeInvitation(request.getInvitationToken(), email);
 
         User user = User.builder()
                 .fullName(request.getFullName())
-                .email(request.getEmail())
+                .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.TRAINEE)
                 .build();
@@ -110,10 +112,11 @@ public class AuthService {
 
     // ── Login (both roles) ────────────────────────────────────────────────────
     public AuthResponse login(LoginRequest request) {
+        String email = request.getEmail().toLowerCase();
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+                new UsernamePasswordAuthenticationToken(email, request.getPassword()));
 
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findByEmail(email)
                 .orElseThrow();
 
         long iatSec = Instant.now().getEpochSecond();
@@ -158,29 +161,31 @@ public class AuthService {
             String roleStr,
             String invitationToken) {
 
+        if (email != null) email = email.toLowerCase();
+
         // 1. Try to find by provider subject (most stable — Apple can hide email on re-login)
         User user = userRepository
                 .findByAuthProviderAndProviderSubject(provider, providerSubject)
                 .orElse(null);
 
-        // 2. If not found by subject, try by email (handles first-time login where subject unknown)
+        // 2. If not found by subject, try by email
         if (user == null && email != null) {
             user = userRepository.findByEmail(email).orElse(null);
 
             if (user != null) {
-                if (user.getAuthProvider() == AuthProvider.LOCAL) {
-                    // Email belongs to a password account — reject SSO
-                    throw new ConflictException(
-                            "An account with this email already exists. Please log in with your password.");
-                }
-                if (user.getAuthProvider() != provider) {
-                    // Email belongs to a different SSO provider (e.g. Apple account, not Google)
+                AuthProvider existingProvider = user.getAuthProvider();
+
+                if (existingProvider == provider || existingProvider == AuthProvider.LOCAL || existingProvider == null) {
+                    // Link/upgrade: email is verified by the SSO provider, so allow sign-in
+                    // and attach the provider + stable subject so future logins hit path 1.
+                    user.setAuthProvider(provider);
+                    user.setProviderSubject(providerSubject);
+                } else {
+                    // Email is tied to a completely different SSO provider (e.g. Apple vs Google)
                     throw new ConflictException(
                             "An account with this email already exists via a different sign-in method. " +
                             "Please use your original sign-in method.");
                 }
-                // Same SSO provider, missing subject — backfill it
-                user.setProviderSubject(providerSubject);
             }
         }
 
@@ -199,15 +204,13 @@ public class AuthService {
                     "Cannot create account: email was not returned by the identity provider. " +
                     "Please allow email access when signing in.");
         }
-        if (userRepository.existsByEmail(email)) {
-            throw new ConflictException(
-                    "An account with this email already exists. Please log in with your password.");
-        }
 
         Role role = parseRole(roleStr);
 
         User newUser = User.builder()
-                .fullName(fullName != null && !fullName.isBlank() ? fullName : email.split("@")[0])
+                .fullName(fullName != null && !fullName.isBlank() ? fullName
+                        : email.endsWith("@privaterelay.appleid.com") ? "Apple User"
+                        : email.split("@")[0])
                 .email(email)
                 .password(passwordEncoder.encode(UUID.randomUUID().toString())) // unusable random password
                 .role(role)

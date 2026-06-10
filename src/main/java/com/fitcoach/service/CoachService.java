@@ -164,44 +164,84 @@ public class CoachService {
                 .collect(Collectors.toList());
     }
 
+    // ── Alert threshold: only flag trainees below this combined adherence % ──────
+    private static final int ALERT_THRESHOLD_PCT = 65;
+    // ── Minimum completed days of plan coverage before we can meaningfully alert ─
+    private static final long MIN_COVERAGE_DAYS = 3;
+
     @Transactional(readOnly = true)
     public List<CoachAlertResponse> getAlerts(String email) {
         Coach coach = findCoachByEmail(email);
-        LocalDate today = LocalDate.now();
+        // Use yesterday as window end — today is incomplete so we only judge closed days.
+        LocalDate yesterday = LocalDate.now().minusDays(1);
 
-        List<Trainee> trainees = traineeRepository.findAllByCoachId(coach.getId());
         record PendingAlert(Trainee trainee, Adherence7d adherence) {}
         List<PendingAlert> pending = new ArrayList<>();
 
-        for (Trainee trainee : trainees) {
+        for (Trainee trainee : traineeRepository.findAllByCoachId(coach.getId())) {
             LocalDate cycleStart = cycleWindowStart(trainee);
-            Adherence7d a = computeAdherence7d(trainee.getId(), cycleStart, today);
-            if (!a.hasAssignablePlans() || a.combinedPercent() >= 100) {
-                continue;
-            }
+            // If the cycle started today, yesterday is before the window → no completed data.
+            if (cycleStart.isAfter(yesterday)) continue;
+
+            Adherence7d a = computeAdherence7d(trainee.getId(), cycleStart, yesterday);
+
+            // Skip trainees with no active plans or insufficient coverage to avoid false positives.
+            if (!a.hasAssignablePlans() || a.effectiveCoverageDays < MIN_COVERAGE_DAYS) continue;
+
+            // Only raise an alert when adherence is meaningfully below the threshold.
+            if (a.combinedPercent() >= ALERT_THRESHOLD_PCT) continue;
+
             pending.add(new PendingAlert(trainee, a));
         }
 
+        // Worst adherence first.
         pending.sort(Comparator.comparingInt(p -> p.adherence().combinedPercent()));
 
         List<CoachAlertResponse> alerts = new ArrayList<>();
         for (PendingAlert p : pending) {
+            Adherence7d a = p.adherence();
+            String alertType = resolveAlertType(a);
             alerts.add(CoachAlertResponse.builder()
-                    .id("low-adherence-" + p.trainee().getId())
+                    .id("alert-" + p.trainee().getId())
                     .traineeId(String.valueOf(p.trainee().getId()))
                     .traineeName(p.trainee().getUser().getFullName())
-                    .message(formatAdherenceAlertMessage(p.adherence()))
-                    .type("low_adherence")
+                    .message(formatAlertMessage(a))
+                    .type(alertType)
+                    .adherencePct(a.combinedPercent())
                     .build());
         }
         return alerts;
     }
 
+    /** Picks the dominant alert type based on which metric is worse. */
+    private static String resolveAlertType(Adherence7d a) {
+        boolean workoutLow = a.workoutPct >= 0 && a.workoutPct < ALERT_THRESHOLD_PCT;
+        boolean nutritionLow = a.nutritionPct >= 0 && a.nutritionPct < ALERT_THRESHOLD_PCT;
+        if (workoutLow && nutritionLow) {
+            return a.workoutPct <= a.nutritionPct ? "missed" : "nutrition";
+        }
+        if (workoutLow) return "missed";
+        if (nutritionLow) return "nutrition";
+        // Both plans exist but combined average is below threshold — flag the worse one.
+        if (a.workoutPct >= 0 && a.nutritionPct >= 0) {
+            return a.workoutPct <= a.nutritionPct ? "missed" : "nutrition";
+        }
+        return a.workoutPct >= 0 ? "missed" : "nutrition";
+    }
+
+    /** Single human-readable line describing the dominant problem. */
+    private static String formatAlertMessage(Adherence7d a) {
+        String type = resolveAlertType(a);
+        if ("missed".equals(type)) {
+            int missed = (int) Math.ceil(Math.max(1, a.workoutExpected - a.workoutActual));
+            return "Missed " + missed + "+ workout" + (missed == 1 ? "" : "s") + " this week";
+        }
+        return "Nutrition adherence dropped to " + a.nutritionPct + "%";
+    }
+
     /**
      * Returns the start of the trainee's current 7-day adherence cycle.
-     * Cycles are anchored to the trainee's join date: cycle 1 = days 0–6, cycle 2 = days 7–13, etc.
-     * A trainee in the middle of a cycle gets a window from the cycle start to today (not a full 7 days),
-     * which is fair to beginners who haven't completed their first week yet.
+     * Cycles are anchored to the trainee's join date so the window resets cleanly every 7 days.
      */
     private static LocalDate cycleWindowStart(Trainee trainee) {
         LocalDate today = LocalDate.now();
@@ -214,13 +254,13 @@ public class CoachService {
     }
 
     /**
-     * Adherence for a given window: workouts from active assignments (expected sessions/week prorated by
-     * overlap with the window and {@link PlanAssignment#getStartDate()}), nutrition from all assigned
-     * plans (each meal once per day in the window). Combined score is the average of workout and
-     * nutrition percentages when both apply; otherwise the single applicable score.
+     * Computes adherence over [windowStart, windowEnd] (both inclusive, windowEnd = yesterday).
+     * Only counts completed plan-session days so new trainees don't get flagged on day 1.
      */
     private Adherence7d computeAdherence7d(Long traineeId, LocalDate windowStart, LocalDate windowEnd) {
         double workoutExpected = 0;
+        double workoutActual = 0;
+        long effectiveCoverageDays = 0;
         Set<UUID> workoutSessionIds = new HashSet<>();
         List<PlanAssignment> activeAssignments =
                 planAssignmentRepository.findByTrainee_IdAndStatus(traineeId, PlanStatus.ACTIVE);
@@ -229,36 +269,31 @@ public class CoachService {
             LocalDate effectiveStart = assignment.getStartDate().isAfter(windowStart)
                     ? assignment.getStartDate()
                     : windowStart;
-            if (effectiveStart.isAfter(windowEnd)) {
-                continue;
-            }
+            if (effectiveStart.isAfter(windowEnd)) continue;
+
             long overlapDays = ChronoUnit.DAYS.between(effectiveStart, windowEnd) + 1;
+            effectiveCoverageDays = Math.max(effectiveCoverageDays, overlapDays);
+
             List<PlanSession> sessions = assignment.getPlan().getSessions();
             int sessionCount = sessions.size();
-            if (sessionCount == 0) {
-                continue;
-            }
+            if (sessionCount == 0) continue;
+
             workoutExpected += sessionCount * (overlapDays / 7.0);
             for (PlanSession s : sessions) {
-                if (s.getId() != null) {
-                    workoutSessionIds.add(s.getId());
-                }
+                if (s.getId() != null) workoutSessionIds.add(s.getId());
             }
         }
 
-        Map<UUID, Long> completionsPerSession = new HashMap<>();
         if (!workoutSessionIds.isEmpty()) {
+            Map<UUID, Long> completionsPerSession = new HashMap<>();
             traineeWorkoutCompletionRepository
                     .findByTrainee_IdAndCompletionDateBetween(traineeId, windowStart, windowEnd)
                     .stream()
                     .filter(c -> workoutSessionIds.contains(c.getPlanSession().getId()))
                     .forEach(c -> completionsPerSession.merge(c.getPlanSession().getId(), 1L, Long::sum));
-        }
-
-        double workoutActual = 0;
-        for (UUID sid : workoutSessionIds) {
-            long n = completionsPerSession.getOrDefault(sid, 0L);
-            workoutActual += Math.min(1L, n);
+            for (UUID sid : workoutSessionIds) {
+                workoutActual += Math.min(1L, completionsPerSession.getOrDefault(sid, 0L));
+            }
         }
 
         int workoutPct = workoutExpected <= 0
@@ -286,28 +321,23 @@ public class CoachService {
                 ? -1
                 : (int) Math.round(Math.min(100.0, 100.0 * nutritionActual / nutritionExpected));
 
-        return new Adherence7d(workoutPct, nutritionPct);
-    }
-
-    private static String formatAdherenceAlertMessage(Adherence7d a) {
-        if (a.workoutPct >= 0 && a.nutritionPct >= 0) {
-            return "Last 7 days: " + a.combinedPercent()
-                    + "% combined adherence (workouts " + a.workoutPct
-                    + "%, nutrition " + a.nutritionPct + "%).";
-        }
-        if (a.workoutPct >= 0) {
-            return "Last 7 days: " + a.workoutPct + "% workout adherence.";
-        }
-        return "Last 7 days: " + a.nutritionPct + "% nutrition adherence.";
+        return new Adherence7d(workoutPct, nutritionPct, workoutExpected, workoutActual, effectiveCoverageDays);
     }
 
     private static final class Adherence7d {
-        private final int workoutPct;
-        private final int nutritionPct;
+        final int workoutPct;
+        final int nutritionPct;
+        final double workoutExpected;
+        final double workoutActual;
+        final long effectiveCoverageDays;
 
-        Adherence7d(int workoutPct, int nutritionPct) {
+        Adherence7d(int workoutPct, int nutritionPct,
+                    double workoutExpected, double workoutActual, long effectiveCoverageDays) {
             this.workoutPct = workoutPct;
             this.nutritionPct = nutritionPct;
+            this.workoutExpected = workoutExpected;
+            this.workoutActual = workoutActual;
+            this.effectiveCoverageDays = effectiveCoverageDays;
         }
 
         boolean hasAssignablePlans() {
@@ -315,12 +345,8 @@ public class CoachService {
         }
 
         int combinedPercent() {
-            if (workoutPct >= 0 && nutritionPct >= 0) {
-                return (workoutPct + nutritionPct) / 2;
-            }
-            if (workoutPct >= 0) {
-                return workoutPct;
-            }
+            if (workoutPct >= 0 && nutritionPct >= 0) return (workoutPct + nutritionPct) / 2;
+            if (workoutPct >= 0) return workoutPct;
             return nutritionPct;
         }
     }
@@ -480,6 +506,14 @@ public class CoachService {
                     .collect(Collectors.toList());
 
             NutritionPlan plan = c.getMeal().getNutritionPlan();
+            List<MealCompletionLogResponse.PlannedIngredientItem> plannedItems =
+                    c.getMeal().getIngredients().stream()
+                            .map(ing -> MealCompletionLogResponse.PlannedIngredientItem.builder()
+                                    .id(ing.getId())
+                                    .name(ing.getName())
+                                    .caloriesPer100g(ing.getCalories())
+                                    .build())
+                            .collect(Collectors.toList());
             result.add(MealCompletionLogResponse.builder()
                     .completionId(c.getId())
                     .mealId(c.getMeal().getId())
@@ -491,6 +525,7 @@ public class CoachService {
                     .skipped(c.isSkipped())
                     .hasDeviations(!items.isEmpty())
                     .ingredientDeviations(items)
+                    .plannedIngredients(plannedItems)
                     .build());
         }
         return result;
