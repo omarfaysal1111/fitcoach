@@ -12,6 +12,7 @@ public class ExtraMealLogResponse {
     private Long id;
     private Long traineeId;
     private Long ingredientId;
+    private Long mealId;
     private String name;
     private int calories;
     private LocalDate mealDate;

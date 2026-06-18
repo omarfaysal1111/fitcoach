@@ -12,6 +12,7 @@ public class ProgressPhotoResponse {
     private Long id;
     private Long traineeId;
     private String label;
+    private Integer slotIndex;
     private String fileUrl;
     private LocalDate photoDate;
     private LocalDateTime uploadedAt;

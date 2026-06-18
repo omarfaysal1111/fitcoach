@@ -68,6 +68,10 @@ public class Trainee {
     /** Weight in kilograms at the time of onboarding. */
     private Double weight;
 
+    /** Goal/target weight in kilograms, set by the coach. Drives the weight-goal progress card. */
+    @Column(name = "target_weight")
+    private Double targetWeight;
+
     /** Date of birth. */
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;

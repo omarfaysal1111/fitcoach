@@ -20,6 +20,12 @@ public class ExtraMealRequest {
      */
     private String name;
 
+    /**
+     * Optional parent meal to nest this item into (SCRUM-62). When provided the
+     * item is attached to that meal instead of being logged as a separate entry.
+     */
+    private Long mealId;
+
     @NotNull
     @Min(1)
     private Integer calories;

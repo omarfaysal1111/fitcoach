@@ -38,6 +38,15 @@ public class ExtraMealLog {
     @JoinColumn(name = "ingredient_id")
     private Ingredient ingredient;
 
+    /**
+     * Optional parent meal this item was added into (SCRUM-62/63). When set, the
+     * client renders the item inline inside that meal instead of as a standalone
+     * entry. Null means a free-standing extra meal.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "meal_id")
+    private Meal meal;
+
     /** Calorie estimate provided by the trainee. */
     @Column(nullable = false)
     private int calories;

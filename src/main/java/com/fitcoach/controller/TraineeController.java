@@ -295,7 +295,7 @@ public ResponseEntity<ApiResponse<List<NutritionPlanDetailedResponse>>> getMyNut
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Note cannot be empty"));
         }
-        traineeService.sendNoteToCoach(principal.getUsername(), request.getNote());
+        traineeService.sendNoteToCoach(principal.getUsername(), request.getNote(), request.getCategory());
         return ResponseEntity.ok(ApiResponse.ok("Note sent to coach", null));
     }
 
@@ -312,19 +312,20 @@ public ResponseEntity<ApiResponse<List<NutritionPlanDetailedResponse>>> getMyNut
             @RequestParam(value = "photoDate", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate photoDate) {
         List<MultipartFile> toProcess = resolveFiles(files, file, photo, image, picture);
-        List<UploadItemResult<ProgressPhotoResponse>> results = toProcess.stream()
-                .map(f -> {
-                    try {
-                        ProgressPhotoResponse r = progressPhotoService.uploadPhotoByTrainee(
-                                principal.getUsername(), f, label, photoDate);
-                        return UploadItemResult.<ProgressPhotoResponse>builder()
-                                .fileName(f.getOriginalFilename()).success(true).data(r).build();
-                    } catch (Exception ex) {
-                        return UploadItemResult.<ProgressPhotoResponse>builder()
-                                .fileName(f.getOriginalFilename()).success(false).error(ex.getMessage()).build();
-                    }
-                })
-                .toList();
+        List<UploadItemResult<ProgressPhotoResponse>> results = new java.util.ArrayList<>();
+        for (int i = 0; i < toProcess.size(); i++) {
+            MultipartFile f = toProcess.get(i);
+            try {
+                // SCRUM-61: preserve the order photos were selected as their slot index.
+                ProgressPhotoResponse r = progressPhotoService.uploadPhotoByTrainee(
+                        principal.getUsername(), f, label, photoDate, i);
+                results.add(UploadItemResult.<ProgressPhotoResponse>builder()
+                        .fileName(f.getOriginalFilename()).success(true).data(r).build());
+            } catch (Exception ex) {
+                results.add(UploadItemResult.<ProgressPhotoResponse>builder()
+                        .fileName(f.getOriginalFilename()).success(false).error(ex.getMessage()).build());
+            }
+        }
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Progress photos processed", results));
     }
@@ -352,19 +353,20 @@ public ResponseEntity<ApiResponse<List<NutritionPlanDetailedResponse>>> getMyNut
             @RequestParam(value = "photoDate", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate photoDate) {
         List<MultipartFile> toProcess = resolveFiles(files, file, photo, image, picture);
-        List<UploadItemResult<ProgressPhotoResponse>> results = toProcess.stream()
-                .map(f -> {
-                    try {
-                        ProgressPhotoResponse r = progressPhotoService.uploadPhotoByTrainee(
-                                principal.getUsername(), f, label, photoDate);
-                        return UploadItemResult.<ProgressPhotoResponse>builder()
-                                .fileName(f.getOriginalFilename()).success(true).data(r).build();
-                    } catch (Exception ex) {
-                        return UploadItemResult.<ProgressPhotoResponse>builder()
-                                .fileName(f.getOriginalFilename()).success(false).error(ex.getMessage()).build();
-                    }
-                })
-                .toList();
+        List<UploadItemResult<ProgressPhotoResponse>> results = new java.util.ArrayList<>();
+        for (int i = 0; i < toProcess.size(); i++) {
+            MultipartFile f = toProcess.get(i);
+            try {
+                // SCRUM-61: preserve the order photos were selected as their slot index.
+                ProgressPhotoResponse r = progressPhotoService.uploadPhotoByTrainee(
+                        principal.getUsername(), f, label, photoDate, i);
+                results.add(UploadItemResult.<ProgressPhotoResponse>builder()
+                        .fileName(f.getOriginalFilename()).success(true).data(r).build());
+            } catch (Exception ex) {
+                results.add(UploadItemResult.<ProgressPhotoResponse>builder()
+                        .fileName(f.getOriginalFilename()).success(false).error(ex.getMessage()).build());
+            }
+        }
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Progress photos processed", results));
     }

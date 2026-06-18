@@ -1,6 +1,7 @@
 package com.fitcoach.service;
 
 import com.fitcoach.domain.entity.*;
+import com.fitcoach.domain.enums.NotificationType;
 import com.fitcoach.dto.request.CreateExercisePlanRequest;
 import com.fitcoach.dto.request.CreatePlanSessionRequest;
 import com.fitcoach.dto.request.WorkoutExerciseItemRequest;
@@ -26,6 +27,7 @@ public class ExercisePlanService {
     private final TraineeRepository traineeRepository;
     private final ExerciseRepository exerciseRepository;
     private final FirebaseNotificationService notificationService;
+    private final NotificationService appNotificationService;
 
     @Transactional
     public WorkoutPlan createExercisePlan(Long coachId, CreateExercisePlanRequest request) {
@@ -112,11 +114,11 @@ public class ExercisePlanService {
 
         WorkoutPlan saved = workoutPlanRepository.save(plan);
 
-        // Notify newly assigned trainees
+        // Notify newly assigned trainees (persisted inbox + push)
         for (Trainee t : newTrainees) {
-            String fcmToken = t.getUser() != null ? t.getUser().getFcmToken() : null;
-            notificationService.sendToToken(
-                    fcmToken,
+            appNotificationService.notify(
+                    t.getUser(),
+                    NotificationType.WORKOUT,
                     "New Workout Plan Assigned!",
                     "Your coach assigned you a new workout plan: " + plan.getTitle()
             );

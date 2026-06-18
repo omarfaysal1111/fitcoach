@@ -10,4 +10,5 @@ import java.util.List;
 public interface NutritionPlanRepository extends JpaRepository<NutritionPlan, Long> {
     List<NutritionPlan> findByCoachId(Long coachId);
     List<NutritionPlan> findByTraineesId(Long traineeId);
+    boolean existsByCoachId(Long coachId);
 }

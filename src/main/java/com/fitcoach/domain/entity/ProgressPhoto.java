@@ -30,6 +30,14 @@ public class ProgressPhoto {
     @Column(length = 200)
     private String label;
 
+    /**
+     * Position of this photo within its date group (SCRUM-61). Drives deterministic
+     * ordering of a multi-photo upload (e.g. front=0, side=1, back=2). Null for
+     * legacy rows uploaded before slot ordering existed.
+     */
+    @Column(name = "slot_index")
+    private Integer slotIndex;
+
     /** Relative URL path returned by {@link com.fitcoach.service.FileStorageService#store}. */
     @Column(name = "file_url", nullable = false)
     private String fileUrl;

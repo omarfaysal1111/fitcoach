@@ -28,4 +28,6 @@ public class CoachTraineeDetailResponse {
     private List<CoachGoalResponse> goals;
     private List<InBodyReportResponse> inbodyReports;
     private List<ProgressPhotoResponse> progressPhotos;
+    /** Notes the trainee has sent to the coach (newest first), tagged NUTRITION / WORKOUT / GENERAL. */
+    private List<TraineeFeedbackResponse> traineeFeedback;
 }

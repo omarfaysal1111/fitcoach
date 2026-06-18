@@ -19,4 +19,6 @@ public interface WorkoutPlanRepository extends JpaRepository<WorkoutPlan, UUID> 
     List<WorkoutPlan> findByCoach_IdOrderByCreatedAtDesc(Long coachId);
 
     Optional<WorkoutPlan> findByIdAndCoach_Id(UUID id, Long coachId);
+
+    boolean existsByCoach_Id(Long coachId);
 }

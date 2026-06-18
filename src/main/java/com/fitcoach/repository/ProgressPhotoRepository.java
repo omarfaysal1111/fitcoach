@@ -11,6 +11,6 @@ import java.util.List;
 @Repository
 public interface ProgressPhotoRepository extends JpaRepository<ProgressPhoto, Long> {
 
-    @Query("SELECT p FROM ProgressPhoto p JOIN FETCH p.trainee WHERE p.trainee.id = :traineeId ORDER BY p.photoDate DESC")
+    @Query("SELECT p FROM ProgressPhoto p JOIN FETCH p.trainee WHERE p.trainee.id = :traineeId ORDER BY p.photoDate DESC, p.slotIndex ASC")
     List<ProgressPhoto> findByTraineeIdOrderByPhotoDateDesc(@Param("traineeId") Long traineeId);
 }

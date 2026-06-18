@@ -11,4 +11,7 @@ public class UpdateTraineeByCoachRequest {
 
     @Size(max = 30, message = "Trainee level must be at most 30 characters")
     private String traineeLevel;
+
+    /** Goal weight in kilograms (null leaves it unchanged). */
+    private Double targetWeight;
 }

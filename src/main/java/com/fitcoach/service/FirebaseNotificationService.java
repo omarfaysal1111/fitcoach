@@ -36,19 +36,26 @@ public class FirebaseNotificationService {
     }
 
     public void sendToToken(String fcmToken, String title, String body) {
+        sendToToken(fcmToken, title, body, null);
+    }
+
+    public void sendToToken(String fcmToken, String title, String body, String type) {
         if (fcmToken == null || fcmToken.isBlank()) return;
         if (FirebaseApp.getApps().isEmpty()) {
             log.debug("Firebase not initialized — skipping notification (title={})", title);
             return;
         }
 
-        Message message = Message.builder()
+        Message.Builder builder = Message.builder()
                 .setNotification(Notification.builder()
                         .setTitle(title)
                         .setBody(body)
                         .build())
-                .setToken(fcmToken)
-                .build();
+                .setToken(fcmToken);
+        if (type != null && !type.isBlank()) {
+            builder.putData("type", type.toLowerCase());
+        }
+        Message message = builder.build();
 
         try {
             String response = FirebaseMessaging.getInstance().send(message);

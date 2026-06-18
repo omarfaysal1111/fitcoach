@@ -12,7 +12,10 @@ import com.fitcoach.domain.entity.TraineeMealCompletion;
 import com.fitcoach.domain.entity.TraineeWorkoutCompletion;
 import com.fitcoach.domain.entity.WorkoutPlan;
 import com.fitcoach.domain.entity.CoachGoal;
+import com.fitcoach.domain.entity.TraineeFeedback;
+import com.fitcoach.domain.enums.FeedbackCategory;
 import com.fitcoach.domain.enums.GoalStatus;
+import com.fitcoach.domain.enums.NotificationType;
 import com.fitcoach.dto.request.ExtraMealRequest;
 import com.fitcoach.dto.request.IngredientSwapRequest;
 import com.fitcoach.dto.request.MealCompletionRequest;
@@ -35,6 +38,8 @@ import com.fitcoach.repository.MealRepository;
 import com.fitcoach.repository.NutritionPlanRepository;
 import com.fitcoach.repository.PlanAssignmentRepository;
 import com.fitcoach.repository.PlanSessionRepository;
+import com.fitcoach.repository.MeasurementLogRepository;
+import com.fitcoach.repository.TraineeFeedbackRepository;
 import com.fitcoach.repository.TraineeMealCompletionRepository;
 import com.fitcoach.repository.TraineeRepository;
 import com.fitcoach.repository.TraineeWaterIntakeRepository;
@@ -66,8 +71,11 @@ public class TraineeService {
     private final IngredientRepository ingredientRepository;
     private final MealIngredientDeviationRepository mealIngredientDeviationRepository;
     private final CoachGoalRepository coachGoalRepository;
+    private final TraineeFeedbackRepository traineeFeedbackRepository;
+    private final MeasurementLogRepository measurementLogRepository;
     private final TraineeWaterIntakeRepository traineeWaterIntakeRepository;
     private final FirebaseNotificationService notificationService;
+    private final NotificationService appNotificationService;
     private final FileStorageService fileStorageService;
 
     private static final int[] STREAK_BADGE_THRESHOLDS = {7, 14, 30, 60, 100, 180, 365};
@@ -256,6 +264,21 @@ public class TraineeService {
                 ? todayNutritionPlan.getWaterTargetLiters()
                 : 2.0;
 
+        // Weight goal: start = oldest logged weight (fallback onboarding weight),
+        // current = most recent logged weight (fallback onboarding weight),
+        // target = coach-set goal weight. All 0 when unavailable so the client
+        // can hide the goal bar.
+        var weightLogs = measurementLogRepository.findByTraineeIdOrderByDateDesc(trainee.getId())
+                .stream()
+                .filter(m -> m.getWeight() != null)
+                .toList();
+        double onboardingWeight = trainee.getWeight() != null ? trainee.getWeight() : 0.0;
+        double weightCurrent = weightLogs.isEmpty() ? onboardingWeight : weightLogs.get(0).getWeight();
+        double weightStart = weightLogs.isEmpty()
+                ? onboardingWeight
+                : weightLogs.get(weightLogs.size() - 1).getWeight();
+        double weightTarget = trainee.getTargetWeight() != null ? trainee.getTargetWeight() : 0.0;
+
         var weeklyGoals = TraineeDashboardTodayResponse.WeeklyGoals.builder()
                 .workoutsCompleted(workoutsCompleted)
                 .workoutsTarget(workoutsTarget)
@@ -263,9 +286,9 @@ public class TraineeService {
                 .mealsTarget(mealsTarget)
                 .waterLiters(weekWaterLiters)
                 .waterTargetLiters(waterTargetLiters)
-                .weightStart(0.0)
-                .weightCurrent(0.0)
-                .weightTarget(0.0)
+                .weightStart(weightStart)
+                .weightCurrent(weightCurrent)
+                .weightTarget(weightTarget)
                 .build();
 
         var achievements = java.util.List.<TraineeDashboardTodayResponse.Achievement>of();
@@ -422,11 +445,12 @@ public class TraineeService {
         trainee.setCurrentStreak(fresh);
         traineeRepository.save(trainee);
 
-        // Notify coach that trainee completed today's workout
+        // Notify coach that trainee completed today's workout (persisted inbox + push)
         Coach coach = trainee.getCoach();
-        if (coach != null && coach.getUser() != null) {
-            notificationService.sendToToken(
-                    coach.getUser().getFcmToken(),
+        if (coach != null) {
+            appNotificationService.notify(
+                    coach.getUser(),
+                    NotificationType.WORKOUT,
                     trainee.getUser().getFullName() + " completed a workout!",
                     trainee.getUser().getFullName() + " just finished today's workout session."
             );
@@ -548,10 +572,19 @@ public class TraineeService {
             name = request.getName().trim();
         }
 
+        // SCRUM-62: nest the item into an existing meal when a mealId is supplied.
+        Meal parentMeal = null;
+        if (request.getMealId() != null) {
+            parentMeal = mealRepository.findById(request.getMealId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Meal not found: " + request.getMealId()));
+        }
+
         ExtraMealLog log = ExtraMealLog.builder()
                 .trainee(trainee)
                 .name(name)
                 .ingredient(ingredient)
+                .meal(parentMeal)
                 .calories(request.getCalories())
                 .mealDate(request.getDate() != null ? request.getDate() : java.time.LocalDate.now())
                 .build();
@@ -564,6 +597,7 @@ public class TraineeService {
                 .id(log.getId())
                 .traineeId(log.getTrainee().getId())
                 .ingredientId(log.getIngredient() != null ? log.getIngredient().getId() : null)
+                .mealId(log.getMeal() != null ? log.getMeal().getId() : null)
                 .name(log.getName())
                 .calories(log.getCalories())
                 .mealDate(log.getMealDate())
@@ -620,20 +654,48 @@ public class TraineeService {
     }
 
     @Transactional
-    public void sendNoteToCoach(String email, String note) {
+    public void sendNoteToCoach(String email, String note, String category) {
         Trainee trainee = getTraineeByEmail(email);
         String trimmed = note == null ? "" : note.trim();
+        FeedbackCategory cat = parseFeedbackCategory(category);
+
+        // Keep the single "latest note" field for backward compatibility, and
+        // append a history row so the coach sees every message (newest first).
         trainee.setTraineeNoteToCoach(trimmed);
         traineeRepository.save(trainee);
 
-        // Notify the coach
-        String coachFcmToken = trainee.getCoach().getUser().getFcmToken();
+        traineeFeedbackRepository.save(TraineeFeedback.builder()
+                .trainee(trainee)
+                .category(cat)
+                .message(trimmed)
+                .build());
+
+        // Notify the coach (persisted inbox + push). Use a category-matched type
+        // so the client can pick the right icon/accent.
         String traineeName = trainee.getUser().getFullName();
-        notificationService.sendToToken(
-                coachFcmToken,
+        appNotificationService.notify(
+                trainee.getCoach().getUser(),
+                notificationTypeFor(cat),
                 "Note from " + traineeName,
                 trimmed.length() > 120 ? trimmed.substring(0, 120) + "…" : trimmed
         );
+    }
+
+    private FeedbackCategory parseFeedbackCategory(String raw) {
+        if (raw == null) return FeedbackCategory.GENERAL;
+        try {
+            return FeedbackCategory.valueOf(raw.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return FeedbackCategory.GENERAL;
+        }
+    }
+
+    private NotificationType notificationTypeFor(FeedbackCategory cat) {
+        return switch (cat) {
+            case NUTRITION -> NotificationType.NUTRITION;
+            case WORKOUT -> NotificationType.WORKOUT;
+            case GENERAL -> NotificationType.MESSAGE;
+        };
     }
 
     public Trainee getTraineeByEmail(String email) {

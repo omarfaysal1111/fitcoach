@@ -119,6 +119,16 @@ public class AuthService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow();
 
+        // SCRUM-88: enforce the role the user selected on the login screen.
+        if (request.getRole() != null && !request.getRole().isBlank()) {
+            Role requested = parseRole(request.getRole());
+            if (user.getRole() != requested) {
+                throw new BadRequestException(
+                        "This account is not registered as a "
+                                + requested.name().toLowerCase() + ".");
+            }
+        }
+
         long iatSec = Instant.now().getEpochSecond();
         user.setJwtIssuedEpochSec(iatSec);
         userRepository.save(user);

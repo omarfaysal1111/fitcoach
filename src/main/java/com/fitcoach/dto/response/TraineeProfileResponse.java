@@ -37,6 +37,8 @@ public class TraineeProfileResponse {
     // onboarding fields
     private Double height;
     private Double weight;
+    /** Coach-set goal weight in kilograms. */
+    private Double targetWeight;
     private LocalDate dateOfBirth;
     private String gender;
     private String healthHistory;

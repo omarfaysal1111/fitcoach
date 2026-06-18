@@ -81,6 +81,13 @@ public class ProgressPhotoService {
     @Transactional
     public ProgressPhotoResponse uploadPhotoByTrainee(String traineeEmail,
             MultipartFile file, String label, LocalDate photoDate) {
+        return uploadPhotoByTrainee(traineeEmail, file, label, photoDate, null);
+    }
+
+    /** Trainee uploads their own progress photo with an explicit slot position (SCRUM-61). */
+    @Transactional
+    public ProgressPhotoResponse uploadPhotoByTrainee(String traineeEmail,
+            MultipartFile file, String label, LocalDate photoDate, Integer slotIndex) {
         var user = userRepository.findByEmail(traineeEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Trainee trainee = traineeRepository.findByUserId(user.getId())
@@ -91,6 +98,7 @@ public class ProgressPhotoService {
         ProgressPhoto photo = ProgressPhoto.builder()
                 .trainee(trainee)
                 .label(label)
+                .slotIndex(slotIndex)
                 .fileUrl(fileUrl)
                 .photoDate(photoDate != null ? photoDate : LocalDate.now())
                 .build();
@@ -158,6 +166,7 @@ public class ProgressPhotoService {
                 .id(photo.getId())
                 .traineeId(photo.getTrainee().getId())
                 .label(photo.getLabel())
+                .slotIndex(photo.getSlotIndex())
                 .fileUrl(photo.getFileUrl())
                 .photoDate(photo.getPhotoDate())
                 .uploadedAt(photo.getUploadedAt())

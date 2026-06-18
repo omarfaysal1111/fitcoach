@@ -1,6 +1,7 @@
 package com.fitcoach.service;
 
 import com.fitcoach.domain.entity.*;
+import com.fitcoach.domain.enums.NotificationType;
 import com.fitcoach.dto.request.CreateMealRequest;
 import com.fitcoach.dto.request.CreateNutritionPlanRequest;
 import com.fitcoach.exception.ResourceNotFoundException;
@@ -22,6 +23,7 @@ public class NutritionPlanService {
     private final TraineeRepository traineeRepository;
     private final IngredientRepository ingredientRepository;
     private final FirebaseNotificationService notificationService;
+    private final NotificationService appNotificationService;
 
     @Transactional
     public NutritionPlan createNutritionPlan(Long coachId, CreateNutritionPlanRequest request) {
@@ -109,11 +111,11 @@ public class NutritionPlanService {
 
         NutritionPlan saved = nutritionPlanRepository.save(plan);
 
-        // Notify newly assigned trainees
+        // Notify newly assigned trainees (persisted inbox + push)
         for (Trainee t : newTrainees) {
-            String fcmToken = t.getUser() != null ? t.getUser().getFcmToken() : null;
-            notificationService.sendToToken(
-                    fcmToken,
+            appNotificationService.notify(
+                    t.getUser(),
+                    NotificationType.NUTRITION,
                     "New Nutrition Plan Assigned!",
                     "Your coach assigned you a new nutrition plan: " + plan.getTitle()
             );

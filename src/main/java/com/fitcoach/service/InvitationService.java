@@ -10,7 +10,9 @@ import com.fitcoach.exception.InvitationException;
 import com.fitcoach.exception.ResourceNotFoundException;
 import com.fitcoach.repository.CoachRepository;
 import com.fitcoach.repository.InvitationRepository;
+import com.fitcoach.repository.NutritionPlanRepository;
 import com.fitcoach.repository.UserRepository;
+import com.fitcoach.repository.WorkoutPlanRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,8 @@ public class InvitationService {
     private final CoachRepository coachRepository;
     private final UserRepository userRepository;
     private final SubscriptionService subscriptionService;
+    private final WorkoutPlanRepository workoutPlanRepository;
+    private final NutritionPlanRepository nutritionPlanRepository;
 
     @Value("${app.invitation.expiry-days}")
     private int expiryDays;
@@ -35,11 +39,15 @@ public class InvitationService {
     public InvitationService(InvitationRepository invitationRepository,
                               CoachRepository coachRepository,
                               UserRepository userRepository,
-                              @Lazy SubscriptionService subscriptionService) {
+                              @Lazy SubscriptionService subscriptionService,
+                              WorkoutPlanRepository workoutPlanRepository,
+                              NutritionPlanRepository nutritionPlanRepository) {
         this.invitationRepository = invitationRepository;
         this.coachRepository = coachRepository;
         this.userRepository = userRepository;
         this.subscriptionService = subscriptionService;
+        this.workoutPlanRepository = workoutPlanRepository;
+        this.nutritionPlanRepository = nutritionPlanRepository;
     }
 
     // ── Create Invitation ─────────────────────────────────────────────────────
@@ -49,6 +57,14 @@ public class InvitationService {
 
         // Enforce subscription client limit before issuing new invitation
         subscriptionService.assertCanInvite(coach);
+
+        // SCRUM-11: a coach must have at least one plan before inviting clients.
+        boolean hasPlan = workoutPlanRepository.existsByCoach_Id(coach.getId())
+                || nutritionPlanRepository.existsByCoachId(coach.getId());
+        if (!hasPlan) {
+            throw new ConflictException(
+                    "Create at least one workout or nutrition plan before inviting clients.");
+        }
 
         String inviteeEmail = request.getEmail().toLowerCase();
 
