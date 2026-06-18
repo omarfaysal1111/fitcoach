@@ -120,14 +120,21 @@ public class AuthService {
                 .orElseThrow();
 
         // SCRUM-88: enforce the role the user selected on the login screen.
-        if (request.getRole() != null && !request.getRole().isBlank()) {
-            Role requested = parseRole(request.getRole());
-            if (user.getRole() != requested) {
-                throw new BadRequestException(
-                        "This account is not registered as a "
-                                + requested.name().toLowerCase() + ".");
-            }
-        }
+        //
+        // TEMPORARILY DISABLED: role-sensitive login is not mandatory for now so
+        // the live version keeps working for accounts whose selected role may not
+        // match their registered role. Re-enable this check soon to make the role
+        // mandatory again — users will then only be able to log in with the role
+        // their account is actually registered as.
+        //
+        // if (request.getRole() != null && !request.getRole().isBlank()) {
+        //     Role requested = parseRole(request.getRole());
+        //     if (user.getRole() != requested) {
+        //         throw new BadRequestException(
+        //                 "This account is not registered as a "
+        //                         + requested.name().toLowerCase() + ".");
+        //     }
+        // }
 
         long iatSec = Instant.now().getEpochSecond();
         user.setJwtIssuedEpochSec(iatSec);
