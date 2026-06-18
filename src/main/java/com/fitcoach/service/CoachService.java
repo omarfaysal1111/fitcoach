@@ -10,6 +10,7 @@ import com.fitcoach.domain.entity.PlanAssignment;
 import com.fitcoach.domain.entity.PlanSession;
 import com.fitcoach.domain.entity.PlanStatus;
 import com.fitcoach.domain.entity.Trainee;
+import com.fitcoach.domain.entity.TraineeWorkoutCompletion;
 import com.fitcoach.domain.enums.TraineeStatus;
 import com.fitcoach.dto.request.UpdateCoachRequest;
 import com.fitcoach.dto.request.UpdateTraineeByCoachRequest;
