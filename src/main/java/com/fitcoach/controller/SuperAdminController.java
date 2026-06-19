@@ -25,7 +25,6 @@ public class SuperAdminController {
     private final SubscriptionService subscriptionService;
 
     /**
-     * POST /api/superadmin/coaches/set-plan
      * Body: { "coachEmail": "...", "plan": "BASIC|PREMIUM|ELITE|TRIAL" }
      * Auth: Basic omarfaysaladmin@admin.co:x6-4C37M
      */
