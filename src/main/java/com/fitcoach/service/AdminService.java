@@ -1,9 +1,13 @@
 package com.fitcoach.service;
 
 import com.fitcoach.domain.entity.Coach;
+import com.fitcoach.domain.entity.Ingredient;
+import com.fitcoach.domain.entity.Meal;
 import com.fitcoach.domain.entity.NutritionPlan;
 import com.fitcoach.domain.entity.PaymentRecord;
 import com.fitcoach.domain.entity.PlanAssignment;
+import com.fitcoach.domain.entity.PlanSession;
+import com.fitcoach.domain.entity.PlanSessionExercise;
 import com.fitcoach.domain.entity.Trainee;
 import com.fitcoach.domain.entity.User;
 import com.fitcoach.domain.enums.PaymentStatus;
@@ -25,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -212,6 +217,12 @@ public class AdminService {
 
     private AdminTraineePlansResponse.WorkoutPlanItem toWorkoutPlanItem(PlanAssignment assignment) {
         var plan = assignment.getPlan();
+        List<AdminTraineePlansResponse.SessionItem> sessions = plan.getSessions().stream()
+                .sorted(Comparator.comparing(PlanSession::getDayOrder,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(this::toSessionItem)
+                .toList();
+
         return AdminTraineePlansResponse.WorkoutPlanItem.builder()
                 .planId(plan.getId())
                 .title(plan.getTitle())
@@ -220,10 +231,45 @@ public class AdminService {
                 .startDate(assignment.getStartDate())
                 .status(assignment.getStatus())
                 .createdAt(plan.getCreatedAt())
+                .sessions(sessions)
+                .build();
+    }
+
+    private AdminTraineePlansResponse.SessionItem toSessionItem(PlanSession session) {
+        List<AdminTraineePlansResponse.ExerciseItem> exercises = session.getSessionExercises().stream()
+                .sorted(Comparator.comparingInt(PlanSessionExercise::getOrderIndex))
+                .map(this::toExerciseItem)
+                .toList();
+
+        return AdminTraineePlansResponse.SessionItem.builder()
+                .sessionId(session.getId())
+                .title(session.getTitle())
+                .dayOrder(session.getDayOrder())
+                .exercises(exercises)
+                .build();
+    }
+
+    private AdminTraineePlansResponse.ExerciseItem toExerciseItem(PlanSessionExercise pse) {
+        var exercise = pse.getExercise();
+        return AdminTraineePlansResponse.ExerciseItem.builder()
+                .id(pse.getId())
+                .orderIndex(pse.getOrderIndex())
+                .name(exercise.getName())
+                .targetedMuscle(exercise.getTargetedMuscle())
+                .videoLink(exercise.getVideoLink())
+                .sectionType(pse.getSectionType() != null ? pse.getSectionType().name() : null)
+                .sets(pse.getSets())
+                .reps(pse.getReps())
+                .loadAmount(pse.getLoadAmount())
+                .restSeconds(pse.getRestSeconds())
                 .build();
     }
 
     private AdminTraineePlansResponse.NutritionPlanItem toNutritionPlanItem(NutritionPlan plan) {
+        List<AdminTraineePlansResponse.MealItem> meals = plan.getMeals().stream()
+                .map(this::toMealItem)
+                .toList();
+
         return AdminTraineePlansResponse.NutritionPlanItem.builder()
                 .planId(plan.getId())
                 .title(plan.getTitle())
@@ -231,6 +277,35 @@ public class AdminService {
                 .coachName(plan.getCoach().getUser().getFullName())
                 .waterTargetLiters(plan.getWaterTargetLiters())
                 .createdAt(plan.getCreatedAt())
+                .meals(meals)
+                .build();
+    }
+
+    private AdminTraineePlansResponse.MealItem toMealItem(Meal meal) {
+        List<AdminTraineePlansResponse.IngredientItem> ingredients = meal.getIngredients().stream()
+                .map(this::toIngredientItem)
+                .toList();
+
+        return AdminTraineePlansResponse.MealItem.builder()
+                .id(meal.getId())
+                .name(meal.getName())
+                .calories(meal.getCalories())
+                .protein(meal.getProtein())
+                .carbs(meal.getCarbs())
+                .fat(meal.getFat())
+                .ingredients(ingredients)
+                .build();
+    }
+
+    private AdminTraineePlansResponse.IngredientItem toIngredientItem(Ingredient ingredient) {
+        return AdminTraineePlansResponse.IngredientItem.builder()
+                .id(ingredient.getId())
+                .name(ingredient.getName())
+                .servingQuantityG(ingredient.getServingQuantityG())
+                .calories(ingredient.getCalories())
+                .protein(ingredient.getProtein())
+                .carbohydrates(ingredient.getCarbohydrates())
+                .fat(ingredient.getFat())
                 .build();
     }
 
