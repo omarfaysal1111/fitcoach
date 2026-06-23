@@ -1,19 +1,26 @@
 package com.fitcoach.service;
 
 import com.fitcoach.domain.entity.Coach;
+import com.fitcoach.domain.entity.NutritionPlan;
 import com.fitcoach.domain.entity.PaymentRecord;
+import com.fitcoach.domain.entity.PlanAssignment;
 import com.fitcoach.domain.entity.Trainee;
+import com.fitcoach.domain.entity.User;
 import com.fitcoach.domain.enums.PaymentStatus;
 import com.fitcoach.domain.enums.TraineeStatus;
 import com.fitcoach.dto.response.admin.AdminCoachDetailResponse;
 import com.fitcoach.dto.response.admin.AdminCoachSummaryResponse;
 import com.fitcoach.dto.response.admin.AdminPaymentResponse;
 import com.fitcoach.dto.response.admin.AdminStatsResponse;
+import com.fitcoach.dto.response.admin.AdminTraineePlansResponse;
 import com.fitcoach.dto.response.admin.AdminTraineeResponse;
 import com.fitcoach.exception.ResourceNotFoundException;
 import com.fitcoach.repository.CoachRepository;
+import com.fitcoach.repository.NutritionPlanRepository;
 import com.fitcoach.repository.PaymentRecordRepository;
+import com.fitcoach.repository.PlanAssignmentRepository;
 import com.fitcoach.repository.TraineeRepository;
+import com.fitcoach.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +35,9 @@ public class AdminService {
     private final CoachRepository coachRepository;
     private final TraineeRepository traineeRepository;
     private final PaymentRecordRepository paymentRecordRepository;
+    private final UserRepository userRepository;
+    private final PlanAssignmentRepository planAssignmentRepository;
+    private final NutritionPlanRepository nutritionPlanRepository;
 
     // ─────────────────────────────── Stats ───────────────────────────────────
 
@@ -112,6 +122,37 @@ public class AdminService {
                 .toList();
     }
 
+    /**
+     * GET /admin/trainees/plans?email={email}
+     * Every plan (workout + nutrition) assigned to the trainee with the given email.
+     */
+    public AdminTraineePlansResponse getPlansForTraineeByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("No user found with email: " + email));
+        Trainee trainee = traineeRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("No trainee found with email: " + email));
+
+        List<AdminTraineePlansResponse.WorkoutPlanItem> workoutPlans =
+                planAssignmentRepository.findByTrainee_Id(trainee.getId())
+                        .stream()
+                        .map(this::toWorkoutPlanItem)
+                        .toList();
+
+        List<AdminTraineePlansResponse.NutritionPlanItem> nutritionPlans =
+                nutritionPlanRepository.findByTraineesId(trainee.getId())
+                        .stream()
+                        .map(this::toNutritionPlanItem)
+                        .toList();
+
+        return AdminTraineePlansResponse.builder()
+                .traineeId(trainee.getId())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .workoutPlans(workoutPlans)
+                .nutritionPlans(nutritionPlans)
+                .build();
+    }
+
     // ─────────────────────────────── Payments ────────────────────────────────
 
     /**
@@ -166,6 +207,30 @@ public class AdminService {
                 .traineeLevel(trainee.getTraineeLevel())
                 .currentStreak(trainee.getCurrentStreak())
                 .joinedAt(trainee.getCreatedAt())
+                .build();
+    }
+
+    private AdminTraineePlansResponse.WorkoutPlanItem toWorkoutPlanItem(PlanAssignment assignment) {
+        var plan = assignment.getPlan();
+        return AdminTraineePlansResponse.WorkoutPlanItem.builder()
+                .planId(plan.getId())
+                .title(plan.getTitle())
+                .description(plan.getDescription())
+                .coachName(plan.getCoach().getUser().getFullName())
+                .startDate(assignment.getStartDate())
+                .status(assignment.getStatus())
+                .createdAt(plan.getCreatedAt())
+                .build();
+    }
+
+    private AdminTraineePlansResponse.NutritionPlanItem toNutritionPlanItem(NutritionPlan plan) {
+        return AdminTraineePlansResponse.NutritionPlanItem.builder()
+                .planId(plan.getId())
+                .title(plan.getTitle())
+                .description(plan.getDescription())
+                .coachName(plan.getCoach().getUser().getFullName())
+                .waterTargetLiters(plan.getWaterTargetLiters())
+                .createdAt(plan.getCreatedAt())
                 .build();
     }
 

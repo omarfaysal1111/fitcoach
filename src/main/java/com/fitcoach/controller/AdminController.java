@@ -5,6 +5,7 @@ import com.fitcoach.dto.response.admin.AdminCoachDetailResponse;
 import com.fitcoach.dto.response.admin.AdminCoachSummaryResponse;
 import com.fitcoach.dto.response.admin.AdminPaymentResponse;
 import com.fitcoach.dto.response.admin.AdminStatsResponse;
+import com.fitcoach.dto.response.admin.AdminTraineePlansResponse;
 import com.fitcoach.dto.response.admin.AdminTraineeResponse;
 import com.fitcoach.service.AdminService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import java.util.List;
  * GET  /admin/coaches                        → all coaches + trainee counts
  * GET  /admin/coaches/{coachId}              → coach detail + trainee roster
  * GET  /admin/coaches/{coachId}/trainees     → trainee list for a coach
+ * GET  /admin/trainees/plans?email=          → plans assigned to a trainee (by email)
  * GET  /admin/payments                       → all payments (all coaches)
  * GET  /admin/coaches/{coachId}/payments     → payments for one coach
  */
@@ -74,6 +76,17 @@ public class AdminController {
     public ResponseEntity<ApiResponse<List<AdminTraineeResponse>>> getTraineesForCoach(
             @PathVariable Long coachId) {
         return ResponseEntity.ok(ApiResponse.ok(adminService.getTraineesForCoach(coachId)));
+    }
+
+    /**
+     * GET /admin/trainees/plans?email={email}
+     * Returns every workout and nutrition plan assigned to the trainee identified
+     * by the given email address.
+     */
+    @GetMapping("/trainees/plans")
+    public ResponseEntity<ApiResponse<AdminTraineePlansResponse>> getTraineePlansByEmail(
+            @RequestParam String email) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getPlansForTraineeByEmail(email)));
     }
 
     // ─────────────────────────────── Payments ────────────────────────────────
