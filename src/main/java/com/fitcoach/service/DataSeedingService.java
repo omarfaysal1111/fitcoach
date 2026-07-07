@@ -7,6 +7,8 @@ import com.fitcoach.domain.entity.Ingredient;
 import com.fitcoach.dto.response.CatalogSeedResponse;
 import com.fitcoach.repository.ExerciseRepository;
 import com.fitcoach.repository.IngredientRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Service;
@@ -50,6 +52,9 @@ public class DataSeedingService implements CommandLineRunner {
     private final ExerciseRepository exerciseRepository;
     private final IngredientRepository ingredientRepository;
     private final TransactionTemplate transactionTemplate;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public DataSeedingService(
             ExerciseRepository exerciseRepository,
@@ -227,7 +232,7 @@ public class DataSeedingService implements CommandLineRunner {
         }
 
         int[] counts = transactionTemplate.execute(status -> {
-            java.util.Set<Long> referenced = new java.util.HashSet<>(exerciseRepository.findReferencedExerciseIds());
+            java.util.Set<Long> referenced = collectReferencedExerciseIds();
             java.util.Set<String> consumed = new java.util.HashSet<>();
 
             List<Exercise> keep = new ArrayList<>();
@@ -273,6 +278,31 @@ public class DataSeedingService implements CommandLineRunner {
                         "Reseeded from ExerciseDB: %d total exercises (%d referenced rows preserved, %d remapped; %d deleted; %d inserted).",
                         total, counts[0], counts[3], counts[1], counts[2]))
                 .build();
+    }
+
+    /**
+     * IDs of exercises referenced by any FK table, so they can be updated in place rather than
+     * deleted. Tolerates schema drift: candidate tables that don't exist in this environment
+     * (checked via {@code to_regclass}) are skipped instead of aborting the whole reseed.
+     */
+    private java.util.Set<Long> collectReferencedExerciseIds() {
+        List<String> candidateTables = List.of(
+                "plan_session_exercises", "workout_exercises", "workout_exercise_items");
+        java.util.Set<Long> ids = new java.util.HashSet<>();
+        for (String table : candidateTables) {
+            Object reg = entityManager
+                    .createNativeQuery("SELECT to_regclass('public." + table + "')")
+                    .getSingleResult();
+            if (reg == null) continue; // table absent in this environment — skip
+            @SuppressWarnings("unchecked")
+            List<Number> rows = entityManager
+                    .createNativeQuery("SELECT DISTINCT exercise_id FROM " + table + " WHERE exercise_id IS NOT NULL")
+                    .getResultList();
+            for (Number n : rows) {
+                if (n != null) ids.add(n.longValue());
+            }
+        }
+        return ids;
     }
 
     /** Exact (normalized) name match, else the hand-curated legacy remap, else null. */
