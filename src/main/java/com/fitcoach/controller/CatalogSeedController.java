@@ -50,6 +50,25 @@ public class CatalogSeedController {
     }
 
     /**
+     * POST /coaches/catalog/reseed-exercises
+     * <p>
+     * Rebuilds the exercise catalog from ExerciseDB so every exercise's video matches its name.
+     * FK-safe: exercises referenced by plans/workouts are updated in place (IDs preserved); all
+     * others are replaced. Fixes catalogs whose videos were mis-assigned by legacy fuzzy matching.
+     */
+    @PostMapping("/reseed-exercises")
+    public ResponseEntity<ApiResponse<CatalogSeedResponse>> reseedExercises(Authentication authentication) {
+        boolean isCoach = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_COACH"));
+        if (!isCoach) {
+            return ResponseEntity.status(403).body(ApiResponse.error("Only coaches can trigger catalog reseeding"));
+        }
+
+        CatalogSeedResponse result = dataSeedingService.reseedExercisesFromExerciseDB();
+        return ResponseEntity.ok(ApiResponse.ok("Exercise catalog reseeded", result));
+    }
+
+    /**
      * POST /coaches/catalog/refresh-videos
      * <p>
      * Resolves each exercise's videoLink from the wger API list URL to the actual video file URL.

@@ -32,9 +32,16 @@ public class DataSeedingService implements CommandLineRunner {
     private static final String USDA_FDC_BASE =
             "https://api.nal.usda.gov/fdc/v1/foods/list?dataType=Foundation&pageSize=200&api_key=" + USDA_FDC_API_KEY;
 
-    // Nutrient numbers we care about (USDA standard codes)
-    private static final String NUTRIENT_CALORIES     = "957"; // Energy – Atwater General Factors (kcal)
-    private static final String NUTRIENT_FAT          = "204"; // Total lipid (fat)
+    // Nutrient numbers we care about (USDA standard codes).
+    // Energy is reported under one of several numbers depending on the food; try them in order
+    // (all kcal). #268 is Energy in kJ and must NOT be used here.
+    private static final String[] NUTRIENT_CALORIES = {
+            "957", // Energy – Atwater General Factors (kcal)
+            "958", // Energy – Atwater Specific Factors (kcal)
+            "208"  // Energy (kcal) – classic; many Foundation foods only carry this one
+    };
+    // Fat is usually #204, but some foods (e.g. oils) only report #298 "Total fat (NLEA)".
+    private static final String[] NUTRIENT_FAT = {"204", "298"};
     private static final String NUTRIENT_WATER        = "255"; // Water
     private static final String NUTRIENT_CARBS        = "205"; // Carbohydrate, by difference
     private static final String NUTRIENT_PROTEIN      = "203"; // Protein
@@ -131,164 +138,214 @@ public class DataSeedingService implements CommandLineRunner {
     }
 
     /**
-     * For exercises already in the DB that still have wger/null videoLinks,
-     * fetch the ExerciseDB dataset and assign gifUrls using a three-tier strategy:
-     *   1. Exact name match (case-insensitive)
-     *   2. Partial name match (one name contains the other)
-     *   3. Muscle-group fallback (any exercisedb GIF targeting the same muscle)
-     * Updates videoLink in-place — does NOT delete rows, so FK references are safe.
+     * For exercises already in the DB that still have wger/null videoLinks, fetch the ExerciseDB
+     * dataset and assign the correct gifUrl by <em>exact</em> (normalized) name match only.
+     *
+     * <p>Historically this did fuzzy substring + muscle-group fallback matching, which forced a
+     * video onto every exercise even with no real match — attaching the same demonstration GIF to
+     * dozens of unrelated movements. That produced the "name and video don't match" corruption.
+     * A wrong video is worse than none, so unmatched exercises are now left untouched. To give the
+     * whole catalog correct videos, use {@link #reseedExercisesFromExerciseDB()} instead.
+     *
+     * <p>Updates videoLink in-place — does NOT delete rows, so FK references are safe.
      */
-    @SuppressWarnings("unchecked")
     private int migrateWgerVideoLinks() {
         List<Exercise> stale = exerciseRepository.findAll().stream()
                 .filter(e -> e.getVideoLink() == null || e.getVideoLink().contains("wger.de"))
                 .toList();
         if (stale.isEmpty()) return 0;
 
-        log.info("Migrating {} exercises with wger/null video links...", stale.size());
-        try {
-            RestTemplate restTemplate = new RestTemplate();
-            String json = restTemplate.getForObject(EXERCISEDB_JSON, String.class);
-            if (json == null || json.isBlank()) {
-                log.warn("ExerciseDB dataset unavailable — skipping migration.");
-                return 0;
-            }
-            List<Map<String, Object>> raw =
-                    new ObjectMapper().readValue(json, new TypeReference<>() {});
-            if (raw.isEmpty()) {
-                log.warn("ExerciseDB dataset was empty — skipping migration.");
-                return 0;
-            }
+        log.info("Migrating {} exercises with wger/null video links (exact match only)...", stale.size());
+        List<Map<String, Object>> raw = fetchExerciseDbDataset();
+        if (raw == null || raw.isEmpty()) {
+            log.warn("ExerciseDB dataset unavailable — skipping migration.");
+            return 0;
+        }
 
-            // Pre-build lookup structures
-            Map<String, String> gifByExactName = new java.util.HashMap<>();
-            Map<String, List<String>> gifsByMuscle = new java.util.HashMap<>();
+        Map<String, String> gifByName = new java.util.HashMap<>();
+        for (Map<String, Object> ex : raw) {
+            String name = (String) ex.get("name");
+            String gif  = (String) ex.get("gifUrl");
+            if (name != null && gif != null) gifByName.putIfAbsent(normalizeName(name), gif);
+        }
 
-            for (Map<String, Object> ex : raw) {
-                String name = (String) ex.get("name");
-                String gif  = (String) ex.get("gifUrl");
-                if (name == null || gif == null) continue;
-
-                gifByExactName.put(name.trim().toLowerCase(), gif);
-
-                List<String> targetMuscles = (List<String>) ex.get("targetMuscles");
-                List<String> bodyParts     = (List<String>) ex.get("bodyParts");
-                List<String> muscleKeys    = new ArrayList<>();
-                if (targetMuscles != null) muscleKeys.addAll(targetMuscles);
-                if (bodyParts     != null) muscleKeys.addAll(bodyParts);
-                for (String m : muscleKeys) {
-                    gifsByMuscle.computeIfAbsent(m.toLowerCase(), k -> new ArrayList<>()).add(gif);
-                }
-            }
-
-            // Muscle mapping: wger category names → exercisedb muscle/bodypart keywords
-            Map<String, List<String>> muscleMap = new java.util.HashMap<>();
-            muscleMap.put("legs",      List.of("upper legs", "lower legs", "quads", "hamstrings", "glutes", "calves"));
-            muscleMap.put("arms",      List.of("upper arms", "forearms", "biceps", "triceps"));
-            muscleMap.put("back",      List.of("back", "lats", "spine", "traps"));
-            muscleMap.put("chest",     List.of("chest", "pectorals"));
-            muscleMap.put("shoulders", List.of("shoulders", "delts"));
-            muscleMap.put("abs",       List.of("waist", "abs"));
-            muscleMap.put("cardio",    List.of("cardio", "waist"));
-            muscleMap.put("general",   List.of("upper legs", "chest", "back"));
-
-            int updated = 0;
-            for (Exercise exercise : stale) {
-                String nameLower = exercise.getName() == null ? "" : exercise.getName().trim().toLowerCase();
-
-                // Tier 1: exact name
-                String gif = gifByExactName.get(nameLower);
-
-                // Tier 2: partial name match
-                if (gif == null) {
-                    for (Map.Entry<String, String> entry : gifByExactName.entrySet()) {
-                        if (entry.getKey().contains(nameLower) || nameLower.contains(entry.getKey())) {
-                            gif = entry.getValue();
-                            break;
-                        }
-                    }
-                }
-
-                // Tier 3: muscle-group fallback
-                if (gif == null) {
-                    String muscle = exercise.getTargetedMuscle() == null
-                            ? "general" : exercise.getTargetedMuscle().trim().toLowerCase();
-                    List<String> keywords = muscleMap.getOrDefault(muscle, muscleMap.get("general"));
-                    outer:
-                    for (String keyword : keywords) {
-                        List<String> candidates = gifsByMuscle.get(keyword);
-                        if (candidates != null && !candidates.isEmpty()) {
-                            gif = candidates.get(updated % candidates.size());
-                            break outer;
-                        }
-                    }
-                }
-
+        int updated = 0;
+        for (Exercise exercise : stale) {
+            String gif = gifByName.get(normalizeName(exercise.getName()));
+            if (gif != null) {
                 exercise.setVideoLink(gif);
                 updated++;
             }
-
-            exerciseRepository.saveAll(stale);
-            return updated;
-
-        } catch (Exception e) {
-            log.error("Failed to migrate wger video links: {}", e.getMessage(), e);
-            return 0;
         }
+        exerciseRepository.saveAll(stale);
+        return updated;
     }
 
-    @SuppressWarnings("unchecked")
-    private int fetchAndPersistExercises() {
-        log.info("Fetching exercises from ExerciseDB dataset...");
-        try {
-            RestTemplate restTemplate = new RestTemplate();
-            String json = restTemplate.getForObject(EXERCISEDB_JSON, String.class);
-            if (json == null || json.isBlank()) {
-                log.warn("ExerciseDB dataset returned empty response.");
-                return 0;
-            }
-            List<Map<String, Object>> raw =
-                    new ObjectMapper().readValue(json, new TypeReference<>() {});
-            if (raw.isEmpty()) {
-                log.warn("ExerciseDB dataset was empty.");
-                return 0;
+    /**
+     * Legacy exercise names that have no entry in the ExerciseDB dataset, mapped to the closest
+     * real ExerciseDB movement so referenced (FK-protected) rows can still get a correct video.
+     * Keyed by the raw lower-cased legacy name; values are ExerciseDB names (matched normalized).
+     */
+    private static final Map<String, String> LEGACY_REMAP = Map.ofEntries(
+            Map.entry("bear walk 2",                  "bear crawl"),
+            Map.entry("cable rear delt fly",          "cable supine reverse fly"),
+            Map.entry("axe hold",                     "band horizontal pallof press"),
+            Map.entry("tricep pushdown on cable",     "cable triceps pushdown (v-bar)"),
+            Map.entry("step-ups",                     "dumbbell step-up"),
+            Map.entry("commando pull-ups",            "pull-up"),
+            Map.entry("abdominal stabilization",      "weighted front plank"),
+            Map.entry("zone 2 running",               "stationary bike run"),
+            Map.entry("коробочный присед",            "barbell full squat"),
+            Map.entry("elliptical",                   "walk elliptical cross trainer"),
+            Map.entry("high knees",                   "high knee against wall"),
+            Map.entry("4-count burpees",              "burpee"),
+            Map.entry("left levator scapulae stretch","neck side stretch"),
+            Map.entry("knee to chest stretch",        "assisted lying glutes stretch")
+    );
+
+    /**
+     * Rebuilds the exercise catalog from the ExerciseDB dataset so every exercise has a video that
+     * genuinely matches its name (each gifUrl is keyed to that exact movement).
+     *
+     * <p>FK-safe: exercises referenced by plans/workouts are updated in place (IDs preserved) to
+     * their matched ExerciseDB entry — by exact name, else via {@link #LEGACY_REMAP}. All other
+     * existing exercises are deleted, then the remaining ExerciseDB movements are inserted fresh.
+     */
+    public CatalogSeedResponse reseedExercisesFromExerciseDB() {
+        List<Map<String, Object>> raw = fetchExerciseDbDataset();
+        if (raw == null || raw.isEmpty()) {
+            return CatalogSeedResponse.builder()
+                    .exercisesSaved(0).ingredientsSaved(0).replacedExisting(true)
+                    .detail("ExerciseDB dataset unavailable — no changes made.").build();
+        }
+
+        Map<String, Map<String, Object>> byName = new java.util.HashMap<>();
+        for (Map<String, Object> ex : raw) {
+            String name = (String) ex.get("name");
+            String gif  = (String) ex.get("gifUrl");
+            if (name != null && gif != null) byName.putIfAbsent(normalizeName(name), ex);
+        }
+
+        int[] counts = transactionTemplate.execute(status -> {
+            java.util.Set<Long> referenced = new java.util.HashSet<>(exerciseRepository.findReferencedExerciseIds());
+            java.util.Set<String> consumed = new java.util.HashSet<>();
+
+            List<Exercise> keep = new ArrayList<>();
+            List<Exercise> remove = new ArrayList<>();
+            int remapped = 0;
+            for (Exercise e : exerciseRepository.findAll()) {
+                if (!referenced.contains(e.getId())) {
+                    remove.add(e);
+                    continue;
+                }
+                Map<String, Object> match = resolveDatasetMatch(e.getName(), byName);
+                if (match != null) {
+                    applyDatasetFields(e, match);
+                    consumed.add(normalizeName((String) match.get("name")));
+                    remapped++;
+                } // else: no match — leave the referenced row's current data as-is
+                keep.add(e);
             }
 
-            List<Exercise> exercises = new ArrayList<>();
+            exerciseRepository.deleteAllInBatch(remove);
+            exerciseRepository.saveAll(keep);
+
+            List<Exercise> fresh = new ArrayList<>();
             for (Map<String, Object> ex : raw) {
                 String name = (String) ex.get("name");
                 if (name == null || name.isBlank()) continue;
-
-                List<String> instructions = (List<String>) ex.get("instructions");
-                String description = buildDescription(instructions);
-
-                String gifUrl = (String) ex.get("gifUrl");
-
-                List<String> targetMuscles = (List<String>) ex.get("targetMuscles");
-                List<String> bodyParts    = (List<String>) ex.get("bodyParts");
-                String muscle = "General";
-                if (targetMuscles != null && !targetMuscles.isEmpty()) {
-                    muscle = capitalize(targetMuscles.get(0));
-                } else if (bodyParts != null && !bodyParts.isEmpty()) {
-                    muscle = capitalize(bodyParts.get(0));
-                }
-
-                exercises.add(Exercise.builder()
-                        .name(capitalize(name.trim()))
-                        .description(description)
-                        .targetedMuscle(muscle)
-                        .videoLink(gifUrl)
-                        .build());
+                if (consumed.contains(normalizeName(name))) continue; // already folded into a kept row
+                fresh.add(toExercise(ex));
             }
+            exerciseRepository.saveAll(fresh);
 
-            exerciseRepository.saveAll(exercises);
-            log.info("Persisted {} exercises from ExerciseDB dataset.", exercises.size());
-            return exercises.size();
+            log.info("Reseed: kept/remapped {} referenced ({} remapped), deleted {}, inserted {} fresh.",
+                    keep.size(), remapped, remove.size(), fresh.size());
+            return new int[]{keep.size(), remove.size(), fresh.size(), remapped};
+        });
 
-        } catch (Exception e) {
-            log.error("Failed to seed exercises from ExerciseDB dataset: {}", e.getMessage(), e);
+        int total = counts[0] + counts[2];
+        return CatalogSeedResponse.builder()
+                .exercisesSaved(total)
+                .ingredientsSaved(0)
+                .replacedExisting(true)
+                .detail(String.format(
+                        "Reseeded from ExerciseDB: %d total exercises (%d referenced rows preserved, %d remapped; %d deleted; %d inserted).",
+                        total, counts[0], counts[3], counts[1], counts[2]))
+                .build();
+    }
+
+    /** Exact (normalized) name match, else the hand-curated legacy remap, else null. */
+    private Map<String, Object> resolveDatasetMatch(String oldName, Map<String, Map<String, Object>> byName) {
+        if (oldName == null) return null;
+        Map<String, Object> exact = byName.get(normalizeName(oldName));
+        if (exact != null) return exact;
+        String remap = LEGACY_REMAP.get(oldName.trim().toLowerCase());
+        return remap == null ? null : byName.get(normalizeName(remap));
+    }
+
+    /** Lower-cases, strips punctuation to spaces, and collapses whitespace for tolerant matching. */
+    private static String normalizeName(String s) {
+        if (s == null) return "";
+        return s.toLowerCase().replaceAll("[^a-z0-9 ]", " ").replaceAll("\\s+", " ").trim();
+    }
+
+    private int fetchAndPersistExercises() {
+        log.info("Fetching exercises from ExerciseDB dataset...");
+        List<Map<String, Object>> raw = fetchExerciseDbDataset();
+        if (raw == null || raw.isEmpty()) {
+            log.warn("ExerciseDB dataset returned empty response.");
             return 0;
         }
+
+        List<Exercise> exercises = new ArrayList<>();
+        for (Map<String, Object> ex : raw) {
+            String name = (String) ex.get("name");
+            if (name == null || name.isBlank()) continue;
+            exercises.add(toExercise(ex));
+        }
+
+        exerciseRepository.saveAll(exercises);
+        log.info("Persisted {} exercises from ExerciseDB dataset.", exercises.size());
+        return exercises.size();
+    }
+
+    /** Fetches and parses the ExerciseDB dataset, or {@code null} on any failure. */
+    private List<Map<String, Object>> fetchExerciseDbDataset() {
+        try {
+            String json = new RestTemplate().getForObject(EXERCISEDB_JSON, String.class);
+            if (json == null || json.isBlank()) return null;
+            return new ObjectMapper().readValue(json, new TypeReference<>() {});
+        } catch (Exception e) {
+            log.error("Failed to fetch ExerciseDB dataset: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /** Builds a new {@link Exercise} from a raw ExerciseDB record (name and gifUrl always paired). */
+    private static Exercise toExercise(Map<String, Object> ex) {
+        Exercise e = new Exercise();
+        applyDatasetFields(e, ex);
+        return e;
+    }
+
+    /** Overwrites an exercise's catalog fields from a raw ExerciseDB record. */
+    @SuppressWarnings("unchecked")
+    private static void applyDatasetFields(Exercise e, Map<String, Object> ex) {
+        String name = (String) ex.get("name");
+        List<String> targetMuscles = (List<String>) ex.get("targetMuscles");
+        List<String> bodyParts     = (List<String>) ex.get("bodyParts");
+        String muscle = "General";
+        if (targetMuscles != null && !targetMuscles.isEmpty()) {
+            muscle = capitalize(targetMuscles.get(0));
+        } else if (bodyParts != null && !bodyParts.isEmpty()) {
+            muscle = capitalize(bodyParts.get(0));
+        }
+
+        e.setName(capitalize(name.trim()));
+        e.setDescription(buildDescription((List<String>) ex.get("instructions")));
+        e.setTargetedMuscle(muscle);
+        e.setVideoLink((String) ex.get("gifUrl"));
     }
 
     private static String buildDescription(List<String> instructions) {
@@ -334,12 +391,12 @@ public class DataSeedingService implements CommandLineRunner {
                     List<Map<String, Object>> foodNutrients =
                             (List<Map<String, Object>>) item.get("foodNutrients");
 
-                    Double calories     = extractNutrient(foodNutrients, NUTRIENT_CALORIES);
-                    Double fat          = extractNutrient(foodNutrients, NUTRIENT_FAT);
+                    Double fat          = extractFirst(foodNutrients, NUTRIENT_FAT);
                     Double water        = extractNutrient(foodNutrients, NUTRIENT_WATER);
                     Double carbs        = extractNutrient(foodNutrients, NUTRIENT_CARBS);
                     Double protein      = extractNutrient(foodNutrients, NUTRIENT_PROTEIN);
                     Double minerals     = extractNutrient(foodNutrients, NUTRIENT_MINERALS);
+                    Double calories     = resolveCalories(foodNutrients, protein, carbs, fat);
 
                     ingredients.add(Ingredient.builder()
                             .name(name.trim())
@@ -369,6 +426,30 @@ public class DataSeedingService implements CommandLineRunner {
             log.error("Failed to seed ingredients from USDA FDC: {}", e.getMessage(), e);
             return 0;
         }
+    }
+
+    /**
+     * Resolves energy (kcal): first reported energy number in {@link #NUTRIENT_CALORIES} priority
+     * order, else the Atwater estimate from macros (4·protein + 4·carbs + 9·fat). Prevents the
+     * "0 calories despite having macros" rows that arose when only one energy number was checked.
+     */
+    private static Double resolveCalories(List<Map<String, Object>> nutrients,
+                                          Double protein, Double carbs, Double fat) {
+        Double kcal = extractFirst(nutrients, NUTRIENT_CALORIES);
+        if (kcal != null && kcal > 0) return kcal;
+        double p = protein == null ? 0 : protein;
+        double c = carbs   == null ? 0 : carbs;
+        double f = fat     == null ? 0 : fat;
+        return 4 * p + 4 * c + 9 * f;
+    }
+
+    /** Returns the first present, positive nutrient amount among {@code numbers}, else 0.0. */
+    private static Double extractFirst(List<Map<String, Object>> nutrients, String... numbers) {
+        for (String number : numbers) {
+            Double v = extractNutrient(nutrients, number);
+            if (v != null && v > 0) return v;
+        }
+        return 0.0;
     }
 
     /**
