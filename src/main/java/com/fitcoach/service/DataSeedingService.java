@@ -396,66 +396,122 @@ public class DataSeedingService implements CommandLineRunner {
 
     private int fetchAndPersistIngredients() {
         log.info("Fetching Foundation food ingredients from USDA FDC...");
-        try {
-            RestTemplate restTemplate = new RestTemplate();
-            List<Ingredient> ingredients = new ArrayList<>();
-            int pageNumber = 1;
-
-            while (true) {
-                String url = USDA_FDC_BASE + "&pageNumber=" + pageNumber;
-
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> page = restTemplate.getForObject(url, List.class);
-
-                if (page == null || page.isEmpty()) {
-                    break;
-                }
-
-                for (Map<String, Object> item : page) {
-                    String name = (String) item.get("description");
-                    if (name == null || name.isBlank()) {
-                        continue;
-                    }
-
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> foodNutrients =
-                            (List<Map<String, Object>>) item.get("foodNutrients");
-
-                    Double fat          = extractFirst(foodNutrients, NUTRIENT_FAT);
-                    Double water        = extractNutrient(foodNutrients, NUTRIENT_WATER);
-                    Double carbs        = extractNutrient(foodNutrients, NUTRIENT_CARBS);
-                    Double protein      = extractNutrient(foodNutrients, NUTRIENT_PROTEIN);
-                    Double minerals     = extractNutrient(foodNutrients, NUTRIENT_MINERALS);
-                    Double calories     = resolveCalories(foodNutrients, protein, carbs, fat);
-
-                    ingredients.add(Ingredient.builder()
-                            .name(name.trim())
-                            .servingQuantityG(100.0)
-                            .calories(calories)
-                            .fat(fat)
-                            .water(water)
-                            .carbohydrates(carbs)
-                            .protein(protein)
-                            .totalMinerals(minerals)
-                            .build());
-                }
-
-                log.info("  → page {}: {} ingredients total so far", pageNumber, ingredients.size());
-
-                if (page.size() < 200) {
-                    break;
-                }
-                pageNumber++;
-            }
-
-            ingredientRepository.saveAll(ingredients);
-            log.info("Persisted {} ingredients from USDA FDC.", ingredients.size());
-            return ingredients.size();
-
-        } catch (Exception e) {
-            log.error("Failed to seed ingredients from USDA FDC: {}", e.getMessage(), e);
+        List<Map<String, Object>> items = fetchUsdaFoundationFoods();
+        if (items.isEmpty()) {
+            log.warn("USDA FDC returned no Foundation foods — nothing seeded.");
             return 0;
         }
+
+        List<Ingredient> ingredients = new ArrayList<>();
+        for (Map<String, Object> item : items) {
+            Ingredient ing = new Ingredient();
+            if (applyIngredientFields(ing, item)) {
+                ing.setServingQuantityG(100.0);
+                ingredients.add(ing);
+            }
+        }
+
+        ingredientRepository.saveAll(ingredients);
+        log.info("Persisted {} ingredients from USDA FDC.", ingredients.size());
+        return ingredients.size();
+    }
+
+    /**
+     * Recomputes nutrition for existing ingredients that were seeded with the old, buggy nutrient
+     * extraction (energy only from #957, fat only from #204) — the source of "0 calories" rows and
+     * oils with 0 fat. FK-safe: updates rows in place by name match, never adds/removes rows.
+     *
+     * <p>Each ingredient matched to its USDA Foundation record (by name) is refreshed with correct
+     * energy (#957→#958→#208, else Atwater) and fat (#204→#298). Ingredients with no USDA match
+     * still get an Atwater calorie estimate from their stored macros if calories are missing.
+     *
+     * @return number of ingredients whose nutrition changed
+     */
+    public int refreshIngredientNutrition() {
+        Map<String, Map<String, Object>> byName = new java.util.HashMap<>();
+        for (Map<String, Object> item : fetchUsdaFoundationFoods()) {
+            String name = (String) item.get("description");
+            if (name != null && !name.isBlank()) byName.putIfAbsent(normalizeName(name), item);
+        }
+
+        List<Ingredient> all = ingredientRepository.findAll();
+        int updated = 0;
+        for (Ingredient ing : all) {
+            boolean changed = false;
+
+            Map<String, Object> match = byName.get(normalizeName(ing.getName()));
+            if (match != null) {
+                changed = applyIngredientFields(ing, match);
+            }
+
+            // Fallback for rows with no USDA match: derive calories from stored macros.
+            Double cal = ing.getCalories();
+            if (cal == null || cal == 0) {
+                double atwater = 4 * nz(ing.getProtein()) + 4 * nz(ing.getCarbohydrates()) + 9 * nz(ing.getFat());
+                if (atwater > 0) {
+                    ing.setCalories(atwater);
+                    changed = true;
+                }
+            }
+
+            if (changed) updated++;
+        }
+
+        ingredientRepository.saveAll(all);
+        log.info("refreshIngredientNutrition: updated {} of {} ingredients.", updated, all.size());
+        return updated;
+    }
+
+    /** Fetches every USDA FDC Foundation food across all pages; empty list on failure. */
+    private List<Map<String, Object>> fetchUsdaFoundationFoods() {
+        List<Map<String, Object>> all = new ArrayList<>();
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            int pageNumber = 1;
+            while (true) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> page =
+                        restTemplate.getForObject(USDA_FDC_BASE + "&pageNumber=" + pageNumber, List.class);
+                if (page == null || page.isEmpty()) break;
+                all.addAll(page);
+                if (page.size() < 200) break;
+                pageNumber++;
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch USDA FDC Foundation foods: {}", e.getMessage(), e);
+        }
+        return all;
+    }
+
+    /**
+     * Populates an ingredient's nutrition fields from a raw USDA food record.
+     * @return true if the record had a usable name (fields applied), false to skip it
+     */
+    @SuppressWarnings("unchecked")
+    private static boolean applyIngredientFields(Ingredient ing, Map<String, Object> item) {
+        String name = (String) item.get("description");
+        if (name == null || name.isBlank()) return false;
+
+        List<Map<String, Object>> n = (List<Map<String, Object>>) item.get("foodNutrients");
+        Double fat      = extractFirst(n, NUTRIENT_FAT);
+        Double water    = extractNutrient(n, NUTRIENT_WATER);
+        Double carbs    = extractNutrient(n, NUTRIENT_CARBS);
+        Double protein  = extractNutrient(n, NUTRIENT_PROTEIN);
+        Double minerals = extractNutrient(n, NUTRIENT_MINERALS);
+        Double calories = resolveCalories(n, protein, carbs, fat);
+
+        ing.setName(name.trim());
+        ing.setFat(fat);
+        ing.setWater(water);
+        ing.setCarbohydrates(carbs);
+        ing.setProtein(protein);
+        ing.setTotalMinerals(minerals);
+        ing.setCalories(calories);
+        return true;
+    }
+
+    private static double nz(Double v) {
+        return v == null ? 0 : v;
     }
 
     /**

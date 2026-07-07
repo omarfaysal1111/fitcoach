@@ -69,6 +69,24 @@ public class CatalogSeedController {
     }
 
     /**
+     * POST /coaches/catalog/refresh-nutrition
+     * <p>
+     * Recomputes ingredient nutrition from USDA (correct energy + fat nutrient numbers, Atwater
+     * fallback), fixing rows that were seeded with 0 calories or 0 fat. FK-safe: updates in place.
+     */
+    @PostMapping("/refresh-nutrition")
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> refreshNutrition(Authentication authentication) {
+        boolean isCoach = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_COACH"));
+        if (!isCoach) {
+            return ResponseEntity.status(403).body(ApiResponse.error("Only coaches can trigger nutrition refresh"));
+        }
+
+        int updated = dataSeedingService.refreshIngredientNutrition();
+        return ResponseEntity.ok(ApiResponse.ok("Ingredient nutrition refreshed", Map.of("updated", updated)));
+    }
+
+    /**
      * POST /coaches/catalog/refresh-videos
      * <p>
      * Resolves each exercise's videoLink from the wger API list URL to the actual video file URL.
