@@ -87,6 +87,25 @@ public class CatalogSeedController {
     }
 
     /**
+     * POST /coaches/catalog/seed-egyptian-foods
+     * <p>
+     * Adds Egyptian/Arabic foods alongside the existing catalog: bundled curated traditional dishes
+     * plus packaged products from Open Food Facts. Additive and idempotent — never removes or edits
+     * existing ingredients, so it is safe to run repeatedly.
+     */
+    @PostMapping("/seed-egyptian-foods")
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> seedEgyptianFoods(Authentication authentication) {
+        boolean isCoach = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_COACH"));
+        if (!isCoach) {
+            return ResponseEntity.status(403).body(ApiResponse.error("Only coaches can seed Egyptian foods"));
+        }
+
+        Map<String, Integer> result = dataSeedingService.seedEgyptianFoods();
+        return ResponseEntity.ok(ApiResponse.ok("Egyptian foods added", result));
+    }
+
+    /**
      * POST /coaches/catalog/refresh-videos
      * <p>
      * Resolves each exercise's videoLink from the wger API list URL to the actual video file URL.

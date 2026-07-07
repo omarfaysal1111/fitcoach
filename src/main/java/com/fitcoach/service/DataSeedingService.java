@@ -11,14 +11,22 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -33,6 +41,16 @@ public class DataSeedingService implements CommandLineRunner {
     private static final String USDA_FDC_API_KEY = "mLBKvhwX2xRVLpcswGHJmAxgvTB14Folwkhw9SSs";
     private static final String USDA_FDC_BASE =
             "https://api.nal.usda.gov/fdc/v1/foods/list?dataType=Foundation&pageSize=200&api_key=" + USDA_FDC_API_KEY;
+
+    // Open Food Facts — Egyptian products with completed nutrition, most-scanned first.
+    private static final String OFF_EGYPT_SEARCH =
+            "https://world.openfoodfacts.org/api/v2/search"
+          + "?countries_tags_en=egypt&states_tags_en=nutrition-facts-completed"
+          + "&fields=product_name,product_name_ar,nutriments&sort_by=unique_scans_n&page_size=100";
+    private static final int OFF_MAX_PAGES = 20;      // cap ingestion (~2000 products)
+    private static final double MAX_KCAL_PER_100G = 1000.0; // sanity ceiling (pure fat ≈ 900)
+    private static final String USER_AGENT = "FitCoach/1.0 (omarfaysal44@gmail.com)";
+    private static final String EGYPTIAN_FOODS_RESOURCE = "data/egyptian-foods.json";
 
     // Nutrient numbers we care about (USDA standard codes).
     // Energy is reported under one of several numbers depending on the food; try them in order
@@ -460,6 +478,126 @@ public class DataSeedingService implements CommandLineRunner {
         ingredientRepository.saveAll(all);
         log.info("refreshIngredientNutrition: updated {} of {} ingredients.", updated, all.size());
         return updated;
+    }
+
+    /**
+     * Adds Egyptian/Arabic foods alongside the existing (USDA) catalog: a bundled set of curated
+     * traditional dishes (koshari, ful, molokhia…) plus packaged products from Open Food Facts.
+     * Additive and idempotent — skips any food whose name already exists (normalized), so it can be
+     * run repeatedly and never touches or removes existing ingredients (FK-safe).
+     *
+     * @return counts: {@code curatedAdded}, {@code packagedAdded}, {@code totalAdded}
+     */
+    public Map<String, Integer> seedEgyptianFoods() {
+        Set<String> seen = ingredientRepository.findAll().stream()
+                .map(i -> normalizeName(i.getName()))
+                .collect(Collectors.toCollection(HashSet::new));
+
+        List<Ingredient> toAdd = new ArrayList<>();
+        int curated  = addCuratedEgyptianDishes(seen, toAdd);
+        int packaged = addOpenFoodFactsEgypt(seen, toAdd);
+
+        ingredientRepository.saveAll(toAdd);
+        log.info("seedEgyptianFoods: added {} curated dishes + {} packaged products = {} new ingredients.",
+                curated, packaged, toAdd.size());
+        return Map.of("curatedAdded", curated, "packagedAdded", packaged, "totalAdded", toAdd.size());
+    }
+
+    /** Loads the bundled curated Egyptian dishes and appends any not already present. */
+    private int addCuratedEgyptianDishes(Set<String> seen, List<Ingredient> out) {
+        List<Map<String, Object>> dishes;
+        try {
+            dishes = new ObjectMapper().readValue(
+                    new ClassPathResource(EGYPTIAN_FOODS_RESOURCE).getInputStream(),
+                    new TypeReference<>() {});
+        } catch (Exception e) {
+            log.error("Could not load curated Egyptian foods resource: {}", e.getMessage());
+            return 0;
+        }
+
+        int added = 0;
+        for (Map<String, Object> d : dishes) {
+            String ar = str(d.get("name_ar"));
+            String en = str(d.get("name_en"));
+            String name = ar.isBlank() ? en : (en.isBlank() ? ar : ar + " (" + en + ")");
+            if (name.isBlank() || !seen.add(normalizeName(name))) continue;
+
+            out.add(Ingredient.builder()
+                    .name(trim255(name))
+                    .servingQuantityG(100.0)
+                    .calories(extractDouble(d.get("calories")))
+                    .fat(extractDouble(d.get("fat")))
+                    .carbohydrates(extractDouble(d.get("carbohydrates")))
+                    .protein(extractDouble(d.get("protein")))
+                    .build());
+            added++;
+        }
+        return added;
+    }
+
+    /** Fetches Egyptian packaged products from Open Food Facts and appends usable, non-duplicate ones. */
+    @SuppressWarnings("unchecked")
+    private int addOpenFoodFactsEgypt(Set<String> seen, List<Ingredient> out) {
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HttpHeaders.USER_AGENT, USER_AGENT); // Open Food Facts requires a UA
+        HttpEntity<Void> request = new HttpEntity<>(headers);
+
+        int added = 0;
+        for (int page = 1; page <= OFF_MAX_PAGES; page++) {
+            List<Map<String, Object>> products;
+            try {
+                ResponseEntity<Map> resp = restTemplate.exchange(
+                        OFF_EGYPT_SEARCH + "&page=" + page, HttpMethod.GET, request, Map.class);
+                Map<String, Object> body = resp.getBody();
+                products = body == null ? null : (List<Map<String, Object>>) body.get("products");
+            } catch (Exception e) {
+                log.warn("Open Food Facts page {} failed: {} — stopping import.", page, e.getMessage());
+                break;
+            }
+            if (products == null || products.isEmpty()) break;
+
+            try {
+                Thread.sleep(300); // be polite to Open Food Facts; avoids burst 503s
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+
+            for (Map<String, Object> p : products) {
+                Map<String, Object> nutr = (Map<String, Object>) p.get("nutriments");
+                if (nutr == null) continue;
+
+                Double kcal = extractDouble(nutr.get("energy-kcal_100g"));
+                if (kcal == null || kcal <= 0 || kcal > MAX_KCAL_PER_100G) continue;
+
+                String ar = str(p.get("product_name_ar"));
+                String en = str(p.get("product_name"));
+                String name = (!ar.isBlank() && !ar.equals(".")) ? ar : en;
+                if (name.isBlank() || !seen.add(normalizeName(name))) continue;
+
+                out.add(Ingredient.builder()
+                        .name(trim255(name.trim()))
+                        .servingQuantityG(100.0)
+                        .calories(kcal)
+                        .fat(extractDouble(nutr.get("fat_100g")))
+                        .carbohydrates(extractDouble(nutr.get("carbohydrates_100g")))
+                        .protein(extractDouble(nutr.get("proteins_100g")))
+                        .build());
+                added++;
+            }
+
+            if (products.size() < 100) break; // last page
+        }
+        return added;
+    }
+
+    private static String str(Object o) {
+        return o == null ? "" : o.toString().trim();
+    }
+
+    private static String trim255(String s) {
+        return s.length() > 255 ? s.substring(0, 255) : s;
     }
 
     /** Fetches every USDA FDC Foundation food across all pages; empty list on failure. */
