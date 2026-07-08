@@ -357,14 +357,17 @@ public class DataSeedingService implements CommandLineRunner {
         return null;
     }
 
+    /** Plain-text, newline-separated numbered steps (no HTML markup — the frontend renders it raw). */
     private static String buildDescription(List<String> instructions) {
         if (instructions == null || instructions.isEmpty()) return "";
-        StringBuilder sb = new StringBuilder("<ol>");
+        StringBuilder sb = new StringBuilder();
+        int i = 1;
         for (String step : instructions) {
             String text = step.replaceAll("(?i)^Step:\\d+\\s*", "").trim();
-            sb.append("<li>").append(text).append("</li>");
+            if (text.isEmpty()) continue;
+            if (sb.length() > 0) sb.append("\n");
+            sb.append(i++).append(". ").append(text);
         }
-        sb.append("</ol>");
         return sb.toString();
     }
 
