@@ -52,9 +52,9 @@ public class CatalogSeedController {
     /**
      * POST /coaches/catalog/reseed-exercises
      * <p>
-     * Rebuilds the exercise catalog from ExerciseDB so every exercise's video matches its name.
-     * FK-safe: exercises referenced by plans/workouts are updated in place (IDs preserved); all
-     * others are replaced. Fixes catalogs whose videos were mis-assigned by legacy fuzzy matching.
+     * Rebuilds the exercise catalog from the Gym Visual dataset so every exercise's video matches
+     * its name (1324 exercises, each with a unique animated GIF). FK-safe: exercises referenced by
+     * plans/workouts are updated in place (IDs preserved); all others are replaced.
      */
     @PostMapping("/reseed-exercises")
     public ResponseEntity<ApiResponse<CatalogSeedResponse>> reseedExercises(Authentication authentication) {
@@ -64,7 +64,7 @@ public class CatalogSeedController {
             return ResponseEntity.status(403).body(ApiResponse.error("Only coaches can trigger catalog reseeding"));
         }
 
-        CatalogSeedResponse result = dataSeedingService.reseedExercisesFromExerciseDB();
+        CatalogSeedResponse result = dataSeedingService.reseedExercisesFromDataset();
         return ResponseEntity.ok(ApiResponse.ok("Exercise catalog reseeded", result));
     }
 

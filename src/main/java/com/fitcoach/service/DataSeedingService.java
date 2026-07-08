@@ -34,8 +34,13 @@ public class DataSeedingService implements CommandLineRunner {
 
     private static final String WGER_BASE = "https://wger.de/api/v2";
     private static final int PAGE_SIZE = 100;
-    private static final String EXERCISEDB_JSON =
-            "https://raw.githubusercontent.com/bootstrapping-lab/exercisedb-api/main/src/data/exercises.json";
+    // Gym Visual exercise dataset (hasaneyldrm/exercises-dataset): 1324 exercises, each with a
+    // unique animated GIF, target muscle, and multilingual step instructions. Free (MIT), no API
+    // key; media served straight from raw.githubusercontent.com.
+    private static final String GYMVISUAL_JSON =
+            "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/data/exercises.json";
+    private static final String GYMVISUAL_MEDIA_BASE =
+            "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/";
 
     // USDA FDC Foundation Foods API
     private static final String USDA_FDC_API_KEY = "mLBKvhwX2xRVLpcswGHJmAxgvTB14Folwkhw9SSs";
@@ -87,11 +92,11 @@ public class DataSeedingService implements CommandLineRunner {
     public void run(String... args) {
         if (exerciseRepository.count() == 0) {
             int n = fetchAndPersistExercises();
-            log.info("Startup: seeded {} exercises from ExerciseDB.", n);
+            log.info("Startup: seeded {} exercises from Gym Visual dataset.", n);
         } else {
             int fixed = migrateWgerVideoLinks();
             if (fixed > 0) {
-                log.info("Startup: migrated {} wger video links → ExerciseDB gif URLs.", fixed);
+                log.info("Startup: migrated {} wger video links → Gym Visual gif URLs.", fixed);
             } else {
                 log.info("Startup: no stale video links found — skipping migration.");
             }
@@ -161,14 +166,14 @@ public class DataSeedingService implements CommandLineRunner {
     }
 
     /**
-     * For exercises already in the DB that still have wger/null videoLinks, fetch the ExerciseDB
-     * dataset and assign the correct gifUrl by <em>exact</em> (normalized) name match only.
+     * For exercises already in the DB that still have wger/null videoLinks, fetch the Gym Visual
+     * dataset and assign the correct gif URL by <em>exact</em> (normalized) name match only.
      *
      * <p>Historically this did fuzzy substring + muscle-group fallback matching, which forced a
      * video onto every exercise even with no real match — attaching the same demonstration GIF to
      * dozens of unrelated movements. That produced the "name and video don't match" corruption.
      * A wrong video is worse than none, so unmatched exercises are now left untouched. To give the
-     * whole catalog correct videos, use {@link #reseedExercisesFromExerciseDB()} instead.
+     * whole catalog correct videos, use {@link #reseedExercisesFromDataset()} instead.
      *
      * <p>Updates videoLink in-place — does NOT delete rows, so FK references are safe.
      */
@@ -179,16 +184,16 @@ public class DataSeedingService implements CommandLineRunner {
         if (stale.isEmpty()) return 0;
 
         log.info("Migrating {} exercises with wger/null video links (exact match only)...", stale.size());
-        List<Map<String, Object>> raw = fetchExerciseDbDataset();
+        List<Map<String, Object>> raw = fetchGymVisualDataset();
         if (raw == null || raw.isEmpty()) {
-            log.warn("ExerciseDB dataset unavailable — skipping migration.");
+            log.warn("Gym Visual dataset unavailable — skipping migration.");
             return 0;
         }
 
         Map<String, String> gifByName = new java.util.HashMap<>();
         for (Map<String, Object> ex : raw) {
             String name = (String) ex.get("name");
-            String gif  = (String) ex.get("gifUrl");
+            String gif  = gifUrlOf(ex);
             if (name != null && gif != null) gifByName.putIfAbsent(normalizeName(name), gif);
         }
 
@@ -205,9 +210,10 @@ public class DataSeedingService implements CommandLineRunner {
     }
 
     /**
-     * Legacy exercise names that have no entry in the ExerciseDB dataset, mapped to the closest
-     * real ExerciseDB movement so referenced (FK-protected) rows can still get a correct video.
-     * Keyed by the raw lower-cased legacy name; values are ExerciseDB names (matched normalized).
+     * Legacy exercise names that have no exact entry in the dataset, mapped to the closest real
+     * movement so referenced (FK-protected) rows can still get a correct video. Keyed by the raw
+     * lower-cased legacy name; values are dataset names (matched normalized). Entries that don't
+     * resolve against the current dataset are simply ignored (the referenced row is left as-is).
      */
     private static final Map<String, String> LEGACY_REMAP = Map.ofEntries(
             Map.entry("bear walk 2",                  "bear crawl"),
@@ -227,25 +233,25 @@ public class DataSeedingService implements CommandLineRunner {
     );
 
     /**
-     * Rebuilds the exercise catalog from the ExerciseDB dataset so every exercise has a video that
-     * genuinely matches its name (each gifUrl is keyed to that exact movement).
+     * Rebuilds the exercise catalog from the Gym Visual dataset so every exercise has a video that
+     * genuinely matches its name (each gif_url is keyed to that exact movement).
      *
      * <p>FK-safe: exercises referenced by plans/workouts are updated in place (IDs preserved) to
-     * their matched ExerciseDB entry — by exact name, else via {@link #LEGACY_REMAP}. All other
-     * existing exercises are deleted, then the remaining ExerciseDB movements are inserted fresh.
+     * their matched dataset entry — by exact name, else via {@link #LEGACY_REMAP}. All other
+     * existing exercises are deleted, then the remaining dataset movements are inserted fresh.
      */
-    public CatalogSeedResponse reseedExercisesFromExerciseDB() {
-        List<Map<String, Object>> raw = fetchExerciseDbDataset();
+    public CatalogSeedResponse reseedExercisesFromDataset() {
+        List<Map<String, Object>> raw = fetchGymVisualDataset();
         if (raw == null || raw.isEmpty()) {
             return CatalogSeedResponse.builder()
                     .exercisesSaved(0).ingredientsSaved(0).replacedExisting(true)
-                    .detail("ExerciseDB dataset unavailable — no changes made.").build();
+                    .detail("Gym Visual dataset unavailable — no changes made.").build();
         }
 
         Map<String, Map<String, Object>> byName = new java.util.HashMap<>();
         for (Map<String, Object> ex : raw) {
             String name = (String) ex.get("name");
-            String gif  = (String) ex.get("gifUrl");
+            String gif  = gifUrlOf(ex);
             if (name != null && gif != null) byName.putIfAbsent(normalizeName(name), ex);
         }
 
@@ -293,7 +299,7 @@ public class DataSeedingService implements CommandLineRunner {
                 .ingredientsSaved(0)
                 .replacedExisting(true)
                 .detail(String.format(
-                        "Reseeded from ExerciseDB: %d total exercises (%d referenced rows preserved, %d remapped; %d deleted; %d inserted).",
+                        "Reseeded from Gym Visual dataset: %d total exercises (%d referenced rows preserved, %d remapped; %d deleted; %d inserted).",
                         total, counts[0], counts[3], counts[1], counts[2]))
                 .build();
     }
@@ -339,10 +345,10 @@ public class DataSeedingService implements CommandLineRunner {
     }
 
     private int fetchAndPersistExercises() {
-        log.info("Fetching exercises from ExerciseDB dataset...");
-        List<Map<String, Object>> raw = fetchExerciseDbDataset();
+        log.info("Fetching exercises from Gym Visual dataset...");
+        List<Map<String, Object>> raw = fetchGymVisualDataset();
         if (raw == null || raw.isEmpty()) {
-            log.warn("ExerciseDB dataset returned empty response.");
+            log.warn("Gym Visual dataset returned empty response.");
             return 0;
         }
 
@@ -354,46 +360,75 @@ public class DataSeedingService implements CommandLineRunner {
         }
 
         exerciseRepository.saveAll(exercises);
-        log.info("Persisted {} exercises from ExerciseDB dataset.", exercises.size());
+        log.info("Persisted {} exercises from Gym Visual dataset.", exercises.size());
         return exercises.size();
     }
 
-    /** Fetches and parses the ExerciseDB dataset, or {@code null} on any failure. */
-    private List<Map<String, Object>> fetchExerciseDbDataset() {
+    /** Fetches and parses the Gym Visual dataset, or {@code null} on any failure. */
+    private List<Map<String, Object>> fetchGymVisualDataset() {
         try {
-            String json = new RestTemplate().getForObject(EXERCISEDB_JSON, String.class);
+            String json = new RestTemplate().getForObject(GYMVISUAL_JSON, String.class);
             if (json == null || json.isBlank()) return null;
             return new ObjectMapper().readValue(json, new TypeReference<>() {});
         } catch (Exception e) {
-            log.error("Failed to fetch ExerciseDB dataset: {}", e.getMessage(), e);
+            log.error("Failed to fetch Gym Visual dataset: {}", e.getMessage(), e);
             return null;
         }
     }
 
-    /** Builds a new {@link Exercise} from a raw ExerciseDB record (name and gifUrl always paired). */
+    /** Builds a new {@link Exercise} from a raw Gym Visual record (name and gif_url always paired). */
     private static Exercise toExercise(Map<String, Object> ex) {
         Exercise e = new Exercise();
         applyDatasetFields(e, ex);
         return e;
     }
 
-    /** Overwrites an exercise's catalog fields from a raw ExerciseDB record. */
-    @SuppressWarnings("unchecked")
+    /**
+     * Overwrites an exercise's catalog fields from a raw Gym Visual record. Target muscle falls back
+     * target → muscle_group → body_part; description is built from the English instruction steps.
+     */
     private static void applyDatasetFields(Exercise e, Map<String, Object> ex) {
         String name = (String) ex.get("name");
-        List<String> targetMuscles = (List<String>) ex.get("targetMuscles");
-        List<String> bodyParts     = (List<String>) ex.get("bodyParts");
-        String muscle = "General";
-        if (targetMuscles != null && !targetMuscles.isEmpty()) {
-            muscle = capitalize(targetMuscles.get(0));
-        } else if (bodyParts != null && !bodyParts.isEmpty()) {
-            muscle = capitalize(bodyParts.get(0));
-        }
+        String muscle = firstNonBlank(
+                (String) ex.get("target"),
+                (String) ex.get("muscle_group"),
+                (String) ex.get("body_part"));
 
         e.setName(capitalize(name.trim()));
-        e.setDescription(buildDescription((List<String>) ex.get("instructions")));
-        e.setTargetedMuscle(muscle);
-        e.setVideoLink((String) ex.get("gifUrl"));
+        e.setDescription(buildDescription(englishSteps(ex)));
+        e.setTargetedMuscle(muscle == null ? "General" : capitalize(muscle));
+        e.setVideoLink(gifUrlOf(ex));
+    }
+
+    /** English step list from {@code instruction_steps.en}, else the single {@code instructions.en} paragraph. */
+    @SuppressWarnings("unchecked")
+    private static List<String> englishSteps(Map<String, Object> ex) {
+        Object steps = ex.get("instruction_steps");
+        if (steps instanceof Map) {
+            Object en = ((Map<String, Object>) steps).get("en");
+            if (en instanceof List && !((List<?>) en).isEmpty()) return (List<String>) en;
+        }
+        Object ins = ex.get("instructions");
+        if (ins instanceof Map) {
+            Object en = ((Map<String, Object>) ins).get("en");
+            if (en instanceof String && !((String) en).isBlank()) return List.of((String) en);
+        }
+        return List.of();
+    }
+
+    /** Absolute GIF URL from the dataset's relative {@code gif_url} path, or {@code null} if absent. */
+    private static String gifUrlOf(Map<String, Object> ex) {
+        Object g = ex.get("gif_url");
+        if (!(g instanceof String) || ((String) g).isBlank()) return null;
+        String path = (String) g;
+        return path.startsWith("http") ? path : GYMVISUAL_MEDIA_BASE + path;
+    }
+
+    private static String firstNonBlank(String... vals) {
+        for (String v : vals) {
+            if (v != null && !v.isBlank()) return v;
+        }
+        return null;
     }
 
     private static String buildDescription(List<String> instructions) {
