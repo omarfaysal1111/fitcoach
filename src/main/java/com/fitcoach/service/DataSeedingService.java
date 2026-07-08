@@ -210,36 +210,15 @@ public class DataSeedingService implements CommandLineRunner {
     }
 
     /**
-     * Legacy exercise names that have no exact entry in the dataset, mapped to the closest real
-     * movement so referenced (FK-protected) rows can still get a correct video. Keyed by the raw
-     * lower-cased legacy name; values are dataset names (matched normalized). Entries that don't
-     * resolve against the current dataset are simply ignored (the referenced row is left as-is).
-     */
-    private static final Map<String, String> LEGACY_REMAP = Map.ofEntries(
-            Map.entry("bear walk 2",                  "bear crawl"),
-            Map.entry("cable rear delt fly",          "cable supine reverse fly"),
-            Map.entry("axe hold",                     "band horizontal pallof press"),
-            Map.entry("tricep pushdown on cable",     "cable triceps pushdown (v-bar)"),
-            Map.entry("step-ups",                     "dumbbell step-up"),
-            Map.entry("commando pull-ups",            "pull-up"),
-            Map.entry("abdominal stabilization",      "weighted front plank"),
-            Map.entry("zone 2 running",               "stationary bike run v. 3"),
-            Map.entry("stationary bike run",           "stationary bike run v. 3"),
-            Map.entry("коробочный присед",            "barbell full squat"),
-            Map.entry("elliptical",                   "walk elliptical cross trainer"),
-            Map.entry("high knees",                   "high knee against wall"),
-            Map.entry("4-count burpees",              "burpee"),
-            Map.entry("left levator scapulae stretch","neck side stretch"),
-            Map.entry("knee to chest stretch",        "assisted lying glutes stretch")
-    );
-
-    /**
-     * Rebuilds the exercise catalog from the Gym Visual dataset so every exercise has a video that
-     * genuinely matches its name (each gif_url is keyed to that exact movement).
+     * Truncate-and-reseed: clears the exercise catalog and its <em>entire</em> FK dependency chain,
+     * then seeds the full Gym Visual dataset (1324 exercises) fresh, with IDs restarted at 1.
      *
-     * <p>FK-safe: exercises referenced by plans/workouts are updated in place (IDs preserved) to
-     * their matched dataset entry — by exact name, else via {@link #LEGACY_REMAP}. All other
-     * existing exercises are deleted, then the remaining dataset movements are inserted fresh.
+     * <p><b>Destructive.</b> The plan/workout FKs are {@code NOT NULL} + {@code NO ACTION}, so
+     * exercises cannot be wiped while anything references them. This deletes every row in the tables
+     * that (transitively) reference {@code exercises} — plan exercise assignments and trainee workout
+     * logs included — deepest dependent first, so the wipe always succeeds. The dependency set is
+     * discovered from the live schema, so it stays correct across environments. The dataset is
+     * fetched before any delete, so a fetch failure changes nothing.
      */
     public CatalogSeedResponse reseedExercisesFromDataset() {
         List<Map<String, Object>> raw = fetchGymVisualDataset();
@@ -249,101 +228,11 @@ public class DataSeedingService implements CommandLineRunner {
                     .detail("Gym Visual dataset unavailable — no changes made.").build();
         }
 
-        Map<String, Map<String, Object>> byName = new java.util.HashMap<>();
-        for (Map<String, Object> ex : raw) {
-            String name = (String) ex.get("name");
-            String gif  = gifUrlOf(ex);
-            if (name != null && gif != null) byName.putIfAbsent(normalizeName(name), ex);
-        }
-
-        int[] counts = transactionTemplate.execute(status -> {
-            java.util.Set<Long> referenced = collectReferencedExerciseIds();
-            java.util.Set<String> consumed = new java.util.HashSet<>();
-
-            List<Exercise> keep = new ArrayList<>();
-            List<Exercise> remove = new ArrayList<>();
-            int remapped = 0;
-            for (Exercise e : exerciseRepository.findAll()) {
-                if (!referenced.contains(e.getId())) {
-                    remove.add(e);
-                    continue;
-                }
-                Map<String, Object> match = resolveDatasetMatch(e.getName(), byName);
-                if (match != null) {
-                    applyDatasetFields(e, match);
-                    consumed.add(normalizeName((String) match.get("name")));
-                    remapped++;
-                } // else: no match — leave the referenced row's current data as-is
-                keep.add(e);
-            }
-
-            exerciseRepository.deleteAllInBatch(remove);
-            exerciseRepository.saveAll(keep);
-
-            List<Exercise> fresh = new ArrayList<>();
-            for (Map<String, Object> ex : raw) {
-                String name = (String) ex.get("name");
-                if (name == null || name.isBlank()) continue;
-                if (consumed.contains(normalizeName(name))) continue; // already folded into a kept row
-                fresh.add(toExercise(ex));
-            }
-            exerciseRepository.saveAll(fresh);
-
-            log.info("Reseed: kept/remapped {} referenced ({} remapped), deleted {}, inserted {} fresh.",
-                    keep.size(), remapped, remove.size(), fresh.size());
-            return new int[]{keep.size(), remove.size(), fresh.size(), remapped};
-        });
-
-        int total = counts[0] + counts[2];
-        return CatalogSeedResponse.builder()
-                .exercisesSaved(total)
-                .ingredientsSaved(0)
-                .replacedExisting(true)
-                .detail(String.format(
-                        "Reseeded from Gym Visual dataset: %d total exercises (%d referenced rows preserved, %d remapped; %d deleted; %d inserted).",
-                        total, counts[0], counts[3], counts[1], counts[2]))
-                .build();
-    }
-
-    /**
-     * Hard reset: deletes <em>every</em> exercise and re-seeds the full Gym Visual catalog with
-     * fresh, restarted IDs — no rows preserved, no matching.
-     *
-     * <p>Non-destructive to user data by design. The plan/workout FKs are {@code ON DELETE NO ACTION}
-     * with {@code NOT NULL} {@code exercise_id}, and they sit under trainee workout logs, so wiping
-     * exercises while anything references them would require deleting that history. Rather than do
-     * that, this aborts (rolls back, changes nothing) whenever an exercise is still referenced, and
-     * points you to {@link #reseedExercisesFromDataset()} — which rebuilds the identical catalog with
-     * zero data loss. The reset therefore only runs on a catalog no plan/workout row depends on
-     * (e.g. a fresh or staging DB). The dataset is fetched before any delete, so a fetch failure
-     * changes nothing either.
-     */
-    public CatalogSeedResponse resetExercisesFromDataset() {
-        List<Map<String, Object>> raw = fetchGymVisualDataset();
-        if (raw == null || raw.isEmpty()) {
-            return CatalogSeedResponse.builder()
-                    .exercisesSaved(0).ingredientsSaved(0).replacedExisting(false)
-                    .detail("Gym Visual dataset unavailable — no changes made.").build();
-        }
-
         return transactionTemplate.execute(status -> {
-            long refs = 0;
-            for (String[] tc : exerciseReferencingTables()) {
-                Number c = (Number) entityManager
-                        .createNativeQuery("SELECT count(*) FROM " + tc[0] + " WHERE " + tc[1] + " IS NOT NULL")
-                        .getSingleResult();
-                refs += c.longValue();
+            int dependentsCleared = 0;
+            for (String table : dependentTablesDeepestFirst()) {
+                dependentsCleared += entityManager.createNativeQuery("DELETE FROM " + table).executeUpdate();
             }
-
-            if (refs > 0) {
-                status.setRollbackOnly();
-                return CatalogSeedResponse.builder()
-                        .exercisesSaved(0).ingredientsSaved(0).replacedExisting(false)
-                        .detail(refs + " plan/workout row(s) reference exercises — a hard reset would have to delete "
-                                + "trainee workout history, so it was aborted (nothing changed). Use /reseed-exercises "
-                                + "to rebuild the catalog with zero data loss.").build();
-            }
-
             int removed = entityManager.createNativeQuery("DELETE FROM exercises").executeUpdate();
             entityManager.createNativeQuery("SELECT setval(pg_get_serial_sequence('exercises','id'), 1, false)")
                     .getSingleResult();
@@ -356,66 +245,38 @@ public class DataSeedingService implements CommandLineRunner {
             }
             exerciseRepository.saveAll(fresh);
 
-            log.info("resetExercises: deleted {} exercises, inserted {} fresh.", removed, fresh.size());
+            log.info("Reseed (truncate): cleared {} dependent rows, deleted {} exercises, inserted {} fresh.",
+                    dependentsCleared, removed, fresh.size());
             return CatalogSeedResponse.builder()
                     .exercisesSaved(fresh.size()).ingredientsSaved(0).replacedExisting(true)
-                    .detail(String.format("Hard reset from Gym Visual: deleted %d exercises; inserted %d fresh (IDs restarted at 1).",
-                            removed, fresh.size()))
+                    .detail(String.format(
+                            "Truncated and reseeded from Gym Visual: deleted %d exercises and %d dependent plan/log rows; inserted %d fresh (IDs restarted at 1).",
+                            removed, dependentsCleared, fresh.size()))
                     .build();
         });
     }
 
     /**
-     * Discovers, from the live catalog, every {@code {table, column}} that has a foreign key to
-     * {@code exercises}. Dynamic so it stays correct across schema drift between environments.
+     * Tables that (directly or transitively) hold a foreign key to {@code exercises}, ordered so the
+     * deepest dependents come first — a safe deletion order for wiping the exercise catalog.
+     * Discovered from {@code information_schema} so it tracks the live schema in every environment.
      */
-    private List<String[]> exerciseReferencingTables() {
-        @SuppressWarnings("unchecked")
-        List<Object[]> rows = entityManager.createNativeQuery(
-                "SELECT tc.table_name, kcu.column_name "
-              + "FROM information_schema.table_constraints tc "
-              + "JOIN information_schema.key_column_usage kcu ON kcu.constraint_name = tc.constraint_name "
-              + "JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name "
-              + "WHERE tc.constraint_type = 'FOREIGN KEY' AND ccu.table_name = 'exercises'").getResultList();
-        List<String[]> out = new ArrayList<>();
-        for (Object[] r : rows) {
-            out.add(new String[]{(String) r[0], (String) r[1]});
-        }
-        return out;
-    }
-
-    /**
-     * IDs of exercises referenced by any FK table, so they can be updated in place rather than
-     * deleted. Tolerates schema drift: candidate tables that don't exist in this environment
-     * (checked via {@code to_regclass}) are skipped instead of aborting the whole reseed.
-     */
-    private java.util.Set<Long> collectReferencedExerciseIds() {
-        List<String> candidateTables = List.of(
-                "plan_session_exercises", "workout_exercises", "workout_exercise_items");
-        java.util.Set<Long> ids = new java.util.HashSet<>();
-        for (String table : candidateTables) {
-            Object reg = entityManager
-                    .createNativeQuery("SELECT to_regclass('public." + table + "')")
-                    .getSingleResult();
-            if (reg == null) continue; // table absent in this environment — skip
-            @SuppressWarnings("unchecked")
-            List<Number> rows = entityManager
-                    .createNativeQuery("SELECT DISTINCT exercise_id FROM " + table + " WHERE exercise_id IS NOT NULL")
-                    .getResultList();
-            for (Number n : rows) {
-                if (n != null) ids.add(n.longValue());
-            }
-        }
-        return ids;
-    }
-
-    /** Exact (normalized) name match, else the hand-curated legacy remap, else null. */
-    private Map<String, Object> resolveDatasetMatch(String oldName, Map<String, Map<String, Object>> byName) {
-        if (oldName == null) return null;
-        Map<String, Object> exact = byName.get(normalizeName(oldName));
-        if (exact != null) return exact;
-        String remap = LEGACY_REMAP.get(oldName.trim().toLowerCase());
-        return remap == null ? null : byName.get(normalizeName(remap));
+    @SuppressWarnings("unchecked")
+    private List<String> dependentTablesDeepestFirst() {
+        return entityManager.createNativeQuery(
+                "WITH RECURSIVE deps AS ("
+              + "  SELECT 'exercises'::text COLLATE \"C\" AS tbl, 0 AS depth"
+              + "  UNION ALL"
+              + "  SELECT (tc.table_name)::text COLLATE \"C\", d.depth + 1"
+              + "  FROM deps d"
+              + "  JOIN information_schema.constraint_column_usage ccu ON ccu.table_name = d.tbl"
+              + "  JOIN information_schema.table_constraints tc"
+              + "       ON tc.constraint_name = ccu.constraint_name AND tc.constraint_type = 'FOREIGN KEY'"
+              + "  WHERE tc.table_name <> d.tbl AND d.depth < 20"
+              + ") "
+              + "SELECT tbl FROM (SELECT tbl, MAX(depth) AS md FROM deps WHERE tbl <> 'exercises' GROUP BY tbl) x "
+              + "ORDER BY md DESC")
+                .getResultList();
     }
 
     /** Lower-cases, strips punctuation to spaces, and collapses whitespace for tolerant matching. */

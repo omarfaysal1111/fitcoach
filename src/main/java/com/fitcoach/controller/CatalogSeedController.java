@@ -52,9 +52,10 @@ public class CatalogSeedController {
     /**
      * POST /coaches/catalog/reseed-exercises
      * <p>
-     * Rebuilds the exercise catalog from the Gym Visual dataset so every exercise's video matches
-     * its name (1324 exercises, each with a unique animated GIF). FK-safe: exercises referenced by
-     * plans/workouts are updated in place (IDs preserved); all others are replaced.
+     * Truncate-and-reseed: wipes the exercise catalog and its entire FK dependency chain (plan
+     * exercise assignments and trainee workout logs included), then seeds all 1324 Gym Visual
+     * exercises fresh with IDs restarted at 1. <b>Destructive</b> — it permanently deletes the
+     * dependent plan/log rows.
      */
     @PostMapping("/reseed-exercises")
     public ResponseEntity<ApiResponse<CatalogSeedResponse>> reseedExercises(Authentication authentication) {
@@ -66,26 +67,6 @@ public class CatalogSeedController {
 
         CatalogSeedResponse result = dataSeedingService.reseedExercisesFromDataset();
         return ResponseEntity.ok(ApiResponse.ok("Exercise catalog reseeded", result));
-    }
-
-    /**
-     * POST /coaches/catalog/reset-exercises
-     * <p>
-     * Hard reset: deletes every exercise and re-seeds the full Gym Visual catalog (1324) with fresh,
-     * restarted IDs. Non-destructive to user data: if any plan/workout row still references an
-     * exercise, the reset aborts (nothing changes) rather than delete trainee workout history — use
-     * {@code /reseed-exercises} in that case to rebuild the identical catalog with zero data loss.
-     */
-    @PostMapping("/reset-exercises")
-    public ResponseEntity<ApiResponse<CatalogSeedResponse>> resetExercises(Authentication authentication) {
-        boolean isCoach = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_COACH"));
-        if (!isCoach) {
-            return ResponseEntity.status(403).body(ApiResponse.error("Only coaches can reset the exercise catalog"));
-        }
-
-        CatalogSeedResponse result = dataSeedingService.resetExercisesFromDataset();
-        return ResponseEntity.ok(ApiResponse.ok("Exercise catalog reset", result));
     }
 
     /**
