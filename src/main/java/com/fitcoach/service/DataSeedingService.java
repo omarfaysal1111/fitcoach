@@ -306,6 +306,85 @@ public class DataSeedingService implements CommandLineRunner {
     }
 
     /**
+     * Hard reset: deletes <em>every</em> exercise and re-seeds the full Gym Visual catalog with
+     * fresh, restarted IDs — no rows preserved, no matching.
+     *
+     * <p>Non-destructive to user data by design. The plan/workout FKs are {@code ON DELETE NO ACTION}
+     * with {@code NOT NULL} {@code exercise_id}, and they sit under trainee workout logs, so wiping
+     * exercises while anything references them would require deleting that history. Rather than do
+     * that, this aborts (rolls back, changes nothing) whenever an exercise is still referenced, and
+     * points you to {@link #reseedExercisesFromDataset()} — which rebuilds the identical catalog with
+     * zero data loss. The reset therefore only runs on a catalog no plan/workout row depends on
+     * (e.g. a fresh or staging DB). The dataset is fetched before any delete, so a fetch failure
+     * changes nothing either.
+     */
+    public CatalogSeedResponse resetExercisesFromDataset() {
+        List<Map<String, Object>> raw = fetchGymVisualDataset();
+        if (raw == null || raw.isEmpty()) {
+            return CatalogSeedResponse.builder()
+                    .exercisesSaved(0).ingredientsSaved(0).replacedExisting(false)
+                    .detail("Gym Visual dataset unavailable — no changes made.").build();
+        }
+
+        return transactionTemplate.execute(status -> {
+            long refs = 0;
+            for (String[] tc : exerciseReferencingTables()) {
+                Number c = (Number) entityManager
+                        .createNativeQuery("SELECT count(*) FROM " + tc[0] + " WHERE " + tc[1] + " IS NOT NULL")
+                        .getSingleResult();
+                refs += c.longValue();
+            }
+
+            if (refs > 0) {
+                status.setRollbackOnly();
+                return CatalogSeedResponse.builder()
+                        .exercisesSaved(0).ingredientsSaved(0).replacedExisting(false)
+                        .detail(refs + " plan/workout row(s) reference exercises — a hard reset would have to delete "
+                                + "trainee workout history, so it was aborted (nothing changed). Use /reseed-exercises "
+                                + "to rebuild the catalog with zero data loss.").build();
+            }
+
+            int removed = entityManager.createNativeQuery("DELETE FROM exercises").executeUpdate();
+            entityManager.createNativeQuery("SELECT setval(pg_get_serial_sequence('exercises','id'), 1, false)")
+                    .getSingleResult();
+
+            List<Exercise> fresh = new ArrayList<>();
+            for (Map<String, Object> ex : raw) {
+                String name = (String) ex.get("name");
+                if (name == null || name.isBlank()) continue;
+                fresh.add(toExercise(ex));
+            }
+            exerciseRepository.saveAll(fresh);
+
+            log.info("resetExercises: deleted {} exercises, inserted {} fresh.", removed, fresh.size());
+            return CatalogSeedResponse.builder()
+                    .exercisesSaved(fresh.size()).ingredientsSaved(0).replacedExisting(true)
+                    .detail(String.format("Hard reset from Gym Visual: deleted %d exercises; inserted %d fresh (IDs restarted at 1).",
+                            removed, fresh.size()))
+                    .build();
+        });
+    }
+
+    /**
+     * Discovers, from the live catalog, every {@code {table, column}} that has a foreign key to
+     * {@code exercises}. Dynamic so it stays correct across schema drift between environments.
+     */
+    private List<String[]> exerciseReferencingTables() {
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = entityManager.createNativeQuery(
+                "SELECT tc.table_name, kcu.column_name "
+              + "FROM information_schema.table_constraints tc "
+              + "JOIN information_schema.key_column_usage kcu ON kcu.constraint_name = tc.constraint_name "
+              + "JOIN information_schema.constraint_column_usage ccu ON ccu.constraint_name = tc.constraint_name "
+              + "WHERE tc.constraint_type = 'FOREIGN KEY' AND ccu.table_name = 'exercises'").getResultList();
+        List<String[]> out = new ArrayList<>();
+        for (Object[] r : rows) {
+            out.add(new String[]{(String) r[0], (String) r[1]});
+        }
+        return out;
+    }
+
+    /**
      * IDs of exercises referenced by any FK table, so they can be updated in place rather than
      * deleted. Tolerates schema drift: candidate tables that don't exist in this environment
      * (checked via {@code to_regclass}) are skipped instead of aborting the whole reseed.

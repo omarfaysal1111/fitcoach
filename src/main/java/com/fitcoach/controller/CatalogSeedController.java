@@ -69,6 +69,26 @@ public class CatalogSeedController {
     }
 
     /**
+     * POST /coaches/catalog/reset-exercises
+     * <p>
+     * Hard reset: deletes every exercise and re-seeds the full Gym Visual catalog (1324) with fresh,
+     * restarted IDs. Non-destructive to user data: if any plan/workout row still references an
+     * exercise, the reset aborts (nothing changes) rather than delete trainee workout history — use
+     * {@code /reseed-exercises} in that case to rebuild the identical catalog with zero data loss.
+     */
+    @PostMapping("/reset-exercises")
+    public ResponseEntity<ApiResponse<CatalogSeedResponse>> resetExercises(Authentication authentication) {
+        boolean isCoach = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_COACH"));
+        if (!isCoach) {
+            return ResponseEntity.status(403).body(ApiResponse.error("Only coaches can reset the exercise catalog"));
+        }
+
+        CatalogSeedResponse result = dataSeedingService.resetExercisesFromDataset();
+        return ResponseEntity.ok(ApiResponse.ok("Exercise catalog reset", result));
+    }
+
+    /**
      * POST /coaches/catalog/refresh-nutrition
      * <p>
      * Recomputes ingredient nutrition from USDA (correct energy + fat nutrient numbers, Atwater
