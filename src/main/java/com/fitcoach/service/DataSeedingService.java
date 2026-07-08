@@ -210,73 +210,58 @@ public class DataSeedingService implements CommandLineRunner {
     }
 
     /**
-     * Truncate-and-reseed: clears the exercise catalog and its <em>entire</em> FK dependency chain,
-     * then seeds the full Gym Visual dataset (1324 exercises) fresh, with IDs restarted at 1.
+     * Truncate-and-reseed: wipes the exercise catalog and everything that references it, then seeds
+     * the full Gym Visual dataset (1324 exercises) fresh.
      *
-     * <p><b>Destructive.</b> The plan/workout FKs are {@code NOT NULL} + {@code NO ACTION}, so
-     * exercises cannot be wiped while anything references them. This deletes every row in the tables
-     * that (transitively) reference {@code exercises} — plan exercise assignments and trainee workout
-     * logs included — deepest dependent first, so the wipe always succeeds. The dependency set is
-     * discovered from the live schema, so it stays correct across environments. The dataset is
-     * fetched before any delete, so a fetch failure changes nothing.
+     * <p><b>Destructive.</b> {@code TRUNCATE ... CASCADE} clears {@code exercises} plus every table
+     * that (transitively) references it — plan exercise assignments and trainee workout logs
+     * included — atomically, and restarts the identity so IDs begin at 1. CASCADE resolves the FK
+     * chain via the catalog itself, so (unlike introspecting {@code information_schema}) it does not
+     * depend on the connecting role owning the tables. The dataset is fetched before anything is
+     * deleted, so a fetch failure changes nothing, and any DB error is caught and returned in
+     * {@code detail} rather than surfacing as a generic 500.
      */
     public CatalogSeedResponse reseedExercisesFromDataset() {
         List<Map<String, Object>> raw = fetchGymVisualDataset();
         if (raw == null || raw.isEmpty()) {
             return CatalogSeedResponse.builder()
-                    .exercisesSaved(0).ingredientsSaved(0).replacedExisting(true)
+                    .exercisesSaved(0).ingredientsSaved(0).replacedExisting(false)
                     .detail("Gym Visual dataset unavailable — no changes made.").build();
         }
 
-        return transactionTemplate.execute(status -> {
-            int dependentsCleared = 0;
-            for (String table : dependentTablesDeepestFirst()) {
-                dependentsCleared += entityManager.createNativeQuery("DELETE FROM " + table).executeUpdate();
-            }
-            int removed = entityManager.createNativeQuery("DELETE FROM exercises").executeUpdate();
-            entityManager.createNativeQuery("SELECT setval(pg_get_serial_sequence('exercises','id'), 1, false)")
-                    .getSingleResult();
+        try {
+            return transactionTemplate.execute(status -> {
+                int before = ((Number) entityManager
+                        .createNativeQuery("SELECT count(*) FROM exercises").getSingleResult()).intValue();
+                entityManager.createNativeQuery("TRUNCATE TABLE exercises RESTART IDENTITY CASCADE").executeUpdate();
 
-            List<Exercise> fresh = new ArrayList<>();
-            for (Map<String, Object> ex : raw) {
-                String name = (String) ex.get("name");
-                if (name == null || name.isBlank()) continue;
-                fresh.add(toExercise(ex));
-            }
-            exerciseRepository.saveAll(fresh);
+                List<Exercise> fresh = new ArrayList<>();
+                for (Map<String, Object> ex : raw) {
+                    String name = (String) ex.get("name");
+                    if (name == null || name.isBlank()) continue;
+                    fresh.add(toExercise(ex));
+                }
+                exerciseRepository.saveAll(fresh);
 
-            log.info("Reseed (truncate): cleared {} dependent rows, deleted {} exercises, inserted {} fresh.",
-                    dependentsCleared, removed, fresh.size());
+                log.info("Reseed (truncate cascade): replaced {} exercises with {} fresh.", before, fresh.size());
+                return CatalogSeedResponse.builder()
+                        .exercisesSaved(fresh.size()).ingredientsSaved(0).replacedExisting(true)
+                        .detail(String.format(
+                                "Truncated (cascade) and reseeded from Gym Visual: replaced %d exercises with %d fresh (IDs restarted at 1); dependent plan/log rows were also cleared.",
+                                before, fresh.size()))
+                        .build();
+            });
+        } catch (Exception e) {
+            log.error("Reseed truncate failed", e);
+            Throwable root = e;
+            while (root.getCause() != null && root.getCause() != root) {
+                root = root.getCause();
+            }
             return CatalogSeedResponse.builder()
-                    .exercisesSaved(fresh.size()).ingredientsSaved(0).replacedExisting(true)
-                    .detail(String.format(
-                            "Truncated and reseeded from Gym Visual: deleted %d exercises and %d dependent plan/log rows; inserted %d fresh (IDs restarted at 1).",
-                            removed, dependentsCleared, fresh.size()))
+                    .exercisesSaved(0).ingredientsSaved(0).replacedExisting(false)
+                    .detail("Reseed failed: " + root.getClass().getSimpleName() + ": " + root.getMessage())
                     .build();
-        });
-    }
-
-    /**
-     * Tables that (directly or transitively) hold a foreign key to {@code exercises}, ordered so the
-     * deepest dependents come first — a safe deletion order for wiping the exercise catalog.
-     * Discovered from {@code information_schema} so it tracks the live schema in every environment.
-     */
-    @SuppressWarnings("unchecked")
-    private List<String> dependentTablesDeepestFirst() {
-        return entityManager.createNativeQuery(
-                "WITH RECURSIVE deps AS ("
-              + "  SELECT 'exercises'::text COLLATE \"C\" AS tbl, 0 AS depth"
-              + "  UNION ALL"
-              + "  SELECT (tc.table_name)::text COLLATE \"C\", d.depth + 1"
-              + "  FROM deps d"
-              + "  JOIN information_schema.constraint_column_usage ccu ON ccu.table_name = d.tbl"
-              + "  JOIN information_schema.table_constraints tc"
-              + "       ON tc.constraint_name = ccu.constraint_name AND tc.constraint_type = 'FOREIGN KEY'"
-              + "  WHERE tc.table_name <> d.tbl AND d.depth < 20"
-              + ") "
-              + "SELECT tbl FROM (SELECT tbl, MAX(depth) AS md FROM deps WHERE tbl <> 'exercises' GROUP BY tbl) x "
-              + "ORDER BY md DESC")
-                .getResultList();
+        }
     }
 
     /** Lower-cases, strips punctuation to spaces, and collapses whitespace for tolerant matching. */
